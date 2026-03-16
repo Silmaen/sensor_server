@@ -1,0 +1,25 @@
+{% load i18n %}
+{% if commands %}
+<table>
+    <thead>
+        <tr>
+            <th>{% trans "Date" %}</th>
+            <th>{% trans "Command" %}</th>
+            <th>{% trans "By" %}</th>
+            <th>{% trans "ACK" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for cmd in commands %}
+        <tr>
+            <td>{{ cmd.sent_at|date:"Y-m-d H:i:s" }}</td>
+            <td><code>{{ cmd.command }}</code></td>
+            <td>{{ cmd.sent_by.username|default:"-" }}</td>
+            <td>{% if cmd.acked %}{% trans "Yes" %}{% else %}{% trans "No" %}{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p><small>{% trans "No commands sent." %}</small></p>
+{% endif %}

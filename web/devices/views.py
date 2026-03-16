@@ -1,0 +1,88 @@
+import json
+import logging
+
+import paho.mqtt.publish as mqtt_publish
+from django.conf import settings
+from django.http import HttpResponseBadRequest
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.translation import gettext as _
+
+from accounts.decorators import role_required
+
+from .models import CommandLog, Device
+
+logger = logging.getLogger(__name__)
+
+
+@role_required("guest")
+def device_list_view(request):
+    devices = Device.objects.all()
+    return render(request, "devices/device_list.html", {"devices": devices})
+
+
+@role_required("guest")
+def device_detail_view(request, device_id):
+    device = get_object_or_404(Device, device_id=device_id)
+    commands = device.commands.select_related("sent_by")[:20]
+    return render(
+        request,
+        "devices/device_detail.html",
+        {"device": device, "commands": commands},
+    )
+
+
+@role_required("admin")
+def device_edit_view(request, device_id):
+    device = get_object_or_404(Device, device_id=device_id)
+    if request.method == "POST":
+        device.display_name = request.POST.get("display_name", "")
+        device.location = request.POST.get("location", "")
+        device.save(update_fields=["display_name", "location"])
+        if request.headers.get("HX-Request"):
+            return render(request, "devices/_device_card.html", {"device": device})
+        return redirect("devices:detail", device_id=device.device_id)
+    return render(request, "devices/device_edit.html", {"device": device})
+
+
+@role_required("resident")
+def device_command_view(request, device_id):
+    device = get_object_or_404(Device, device_id=device_id)
+    if request.method != "POST":
+        return HttpResponseBadRequest()
+
+    command_str = request.POST.get("command", "").strip()
+    if not command_str:
+        return HttpResponseBadRequest(_("Empty command."))
+
+    try:
+        command_data = json.loads(command_str)
+    except json.JSONDecodeError:
+        command_data = {"action": command_str}
+
+    topic = f"{device.device_type}/{device.device_id}/command"
+    payload = json.dumps(command_data)
+
+    try:
+        mqtt_publish.single(
+            topic,
+            payload=payload,
+            hostname=settings.MQTT_HOST,
+            port=settings.MQTT_PORT,
+            auth={"username": settings.MQTT_USER, "password": settings.MQTT_PASSWORD},
+            retain=True,
+        )
+    except Exception:
+        logger.exception("Failed to publish MQTT command to %s", topic)
+        return HttpResponseBadRequest(_("MQTT publish error."))
+
+    CommandLog.objects.create(
+        device=device,
+        command=command_data,
+        sent_by=request.user,
+    )
+
+    if request.headers.get("HX-Request"):
+        commands = device.commands.select_related("sent_by")[:20]
+        return render(request, "devices/_command_log.html", {"commands": commands})
+
+    return redirect("devices:detail", device_id=device.device_id)

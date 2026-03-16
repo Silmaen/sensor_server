@@ -1,0 +1,13 @@
+{% load i18n device_tags %}
+<div class="device-card" id="card-{{ device.device_id }}">
+    <h4>
+        <a href="{% url 'devices:detail' device.device_id %}">{{ device.effective_name }}</a>
+        <span id="status-{{ device.device_id }}" class="badge {% if device.is_online %}badge-online{% else %}badge-offline{% endif %}">
+            {% if device.is_online %}{% trans "online" %}{% else %}{% trans "offline" %}{% endif %}
+        </span>
+    </h4>
+    <small>{{ device.device_type }} &mdash; {% if device.location %}{{ device.location }}{% else %}{% trans "Location not set" %}{% endif %}</small>
+    <div id="metrics-{{ device.device_id }}" style="margin-top:0.5rem;">
+    </div>
+    <small>{% trans "Seen:" %} <span id="lastseen-{{ device.device_id }}">{{ device.last_seen|date:"H:i:s"|default:"-" }}</span></small>
+</div>

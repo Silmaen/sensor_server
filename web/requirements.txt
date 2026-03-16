@@ -1,0 +1,8 @@
+django>=5.1,<6
+channels[daphne]>=4.2
+channels-redis>=4.2
+psycopg[binary]>=3.2
+paho-mqtt>=2.1
+django-redis>=5.4
+mozilla-django-oidc>=4.0
+whitenoise>=6.7

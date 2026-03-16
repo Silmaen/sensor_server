@@ -1,0 +1,79 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% trans "IoT Sensors" %}{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://unpkg.com/htmx-ext-ws@2.0.2/ws.js"></script>
+    <style>
+        :root { --pico-font-size: 16px; }
+        .badge { display: inline-block; padding: 0.15em 0.5em; border-radius: 4px; font-size: 0.8em; font-weight: 600; }
+        .badge-online { background: #2ecc40; color: #fff; }
+        .badge-offline { background: #aaa; color: #fff; }
+        .badge-pending { background: #ff851b; color: #fff; }
+        .badge-guest { background: #7fdbff; color: #111; }
+        .badge-resident { background: #0074d9; color: #fff; }
+        .badge-admin { background: #b10dc9; color: #fff; }
+        .device-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+        .device-card { border: 1px solid var(--pico-muted-border-color); border-radius: 8px; padding: 1rem; }
+        .device-card h4 { margin-bottom: 0.3rem; }
+        nav ul li.active > a { font-weight: bold; text-decoration: underline; }
+        .lang-switch { display: inline; margin: 0; }
+        .lang-switch button { background: none; border: none; padding: 0; margin: 0; cursor: pointer; font-size: 0.9em; text-decoration: underline; color: inherit; }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav class="container-fluid">
+        <ul>
+            <li><strong>{% trans "IoT Sensors" %}</strong></li>
+        </ul>
+        <ul>
+            {% if user.is_authenticated and is_approved %}
+                <li><a href="{% url 'readings:dashboard' %}">{% trans "Dashboard" %}</a></li>
+                <li><a href="{% url 'devices:list' %}">{% trans "Devices" %}</a></li>
+                {% if user_role == "admin" or user.is_superuser %}
+                    <li><a href="{% url 'accounts:user_list' %}">{% trans "Users" %}</a></li>
+                    <li><a href="{% url 'admin:index' %}">Admin</a></li>
+                {% endif %}
+                <li>
+                    <form method="post" action="{% url 'accounts:logout' %}" style="margin:0">
+                        {% csrf_token %}
+                        <button type="submit" class="outline secondary" style="margin:0;padding:0.25em 0.5em;">{% trans "Log out" %}</button>
+                    </form>
+                </li>
+            {% elif user.is_authenticated %}
+                <li>
+                    <form method="post" action="{% url 'accounts:logout' %}" style="margin:0">
+                        {% csrf_token %}
+                        <button type="submit" class="outline secondary" style="margin:0;padding:0.25em 0.5em;">{% trans "Log out" %}</button>
+                    </form>
+                </li>
+            {% else %}
+                <li><a href="{{ LOGIN_URL }}">{% trans "Log in" %}</a></li>
+            {% endif %}
+            <li>
+                <form method="post" action="{% url 'set_language' %}" class="lang-switch">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    {% get_current_language as CURRENT_LANG %}
+                    {% if CURRENT_LANG == "fr" %}
+                        <input type="hidden" name="language" value="en">
+                        <button type="submit" title="Switch to English">EN</button>
+                    {% else %}
+                        <input type="hidden" name="language" value="fr">
+                        <button type="submit" title="Passer en français">FR</button>
+                    {% endif %}
+                </form>
+            </li>
+        </ul>
+    </nav>
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

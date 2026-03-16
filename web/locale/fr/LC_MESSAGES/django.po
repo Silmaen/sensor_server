@@ -1,0 +1,220 @@
+# French translations for IoT Sensor Server
+# Copyright (C) 2026
+# This file is distributed under the same license as the sensor_server package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: sensor_server 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-16 00:00+0000\n"
+"PO-Revision-Date: 2026-03-16 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: French\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: templates/base.html
+msgid "IoT Sensors"
+msgstr "Capteurs IoT"
+
+msgid "Dashboard"
+msgstr "Tableau de bord"
+
+msgid "Devices"
+msgstr "Appareils"
+
+msgid "Users"
+msgstr "Utilisateurs"
+
+msgid "Log out"
+msgstr "Deconnexion"
+
+msgid "Log in"
+msgstr "Connexion"
+
+#: accounts/templates/accounts/login.html
+msgid "Username"
+msgstr "Utilisateur"
+
+msgid "Password"
+msgstr "Mot de passe"
+
+msgid "Sign in"
+msgstr "Se connecter"
+
+msgid "Invalid credentials."
+msgstr "Identifiants invalides."
+
+#: accounts/templates/accounts/pending.html
+msgid "Awaiting approval"
+msgstr "En attente d'autorisation"
+
+msgid "Welcome <strong>%(name)s</strong>!"
+msgstr "Bienvenue <strong>%(name)s</strong> !"
+
+msgid "Your access request has been recorded. An administrator must first verify that you are not a robot... or a cat walking on a keyboard."
+msgstr "Votre demande d'acces a ete enregistree. Un administrateur doit d'abord verifier que vous n'etes pas un robot... ou un chat qui marche sur un clavier."
+
+msgid "Patience! In the meantime, you can admire this page. It's quite beautiful, isn't it?"
+msgstr "Patience ! En attendant, vous pouvez toujours admirer cette page. Elle est tres belle, non ?"
+
+msgid "If you think this is an error, contact the system administrator."
+msgstr "Si vous pensez qu'il y a une erreur, contactez l'administrateur du systeme."
+
+#: accounts/templates/accounts/user_list.html
+msgid "User management"
+msgstr "Gestion des utilisateurs"
+
+msgid "Pending users"
+msgstr "Utilisateurs en attente"
+
+msgid "Approved users"
+msgstr "Utilisateurs approuves"
+
+msgid "No pending users."
+msgstr "Aucun utilisateur en attente."
+
+msgid "No approved users."
+msgstr "Aucun utilisateur approuve."
+
+msgid "User"
+msgstr "Utilisateur"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "Action"
+msgstr "Action"
+
+msgid "Role"
+msgstr "Role"
+
+msgid "Approve"
+msgstr "Approuver"
+
+msgid "Update"
+msgstr "Modifier"
+
+msgid "Revoke"
+msgstr "Revoquer"
+
+#: accounts/models.py
+msgid "Guest"
+msgstr "Invite"
+
+msgid "Resident"
+msgstr "Habitant"
+
+msgid "Administrator"
+msgstr "Administrateur"
+
+msgid "pending"
+msgstr "en attente"
+
+#: accounts/decorators.py
+msgid "You do not have the required permissions."
+msgstr "Vous n'avez pas les permissions necessaires."
+
+#: devices/templates
+msgid "Device"
+msgstr "Appareil"
+
+msgid "Type"
+msgstr "Type"
+
+msgid "Location"
+msgstr "Emplacement"
+
+msgid "Status"
+msgstr "Statut"
+
+msgid "Last seen"
+msgstr "Dernier contact"
+
+msgid "online"
+msgstr "en ligne"
+
+msgid "offline"
+msgstr "hors ligne"
+
+msgid "Location not set"
+msgstr "Emplacement non defini"
+
+msgid "Seen:"
+msgstr "Vu :"
+
+msgid "Edit"
+msgstr "Modifier"
+
+msgid "Display name"
+msgstr "Nom d'affichage"
+
+msgid "Save"
+msgstr "Enregistrer"
+
+msgid "Cancel"
+msgstr "Annuler"
+
+msgid "History"
+msgstr "Historique"
+
+msgid "Metric:"
+msgstr "Metrique :"
+
+msgid "Temperature"
+msgstr "Temperature"
+
+msgid "Humidity"
+msgstr "Humidite"
+
+msgid "Period:"
+msgstr "Periode :"
+
+msgid "3 days"
+msgstr "3 jours"
+
+msgid "7 days"
+msgstr "7 jours"
+
+msgid "Send command"
+msgstr "Envoyer une commande"
+
+msgid "Send"
+msgstr "Envoyer"
+
+msgid "Command history"
+msgstr "Historique des commandes"
+
+msgid "Date"
+msgstr "Date"
+
+msgid "Command"
+msgstr "Commande"
+
+msgid "By"
+msgstr "Par"
+
+msgid "ACK"
+msgstr "ACK"
+
+msgid "Yes"
+msgstr "Oui"
+
+msgid "No"
+msgstr "Non"
+
+msgid "No commands sent."
+msgstr "Aucune commande envoyee."
+
+msgid "No devices detected. Devices will appear automatically when they publish to MQTT."
+msgstr "Aucun appareil detecte. Les appareils apparaitront automatiquement quand ils publieront sur MQTT."
+
+#: devices/views.py
+msgid "Empty command."
+msgstr "Commande vide."
+
+msgid "MQTT publish error."
+msgstr "Erreur d'envoi MQTT."

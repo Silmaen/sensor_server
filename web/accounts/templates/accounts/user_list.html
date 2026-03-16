@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "User management" %}{% endblock %}
+
+{% block content %}
+<h2>{% trans "Pending users" %}</h2>
+{% if pending %}
+<table>
+    <thead>
+        <tr>
+            <th>{% trans "User" %}</th>
+            <th>{% trans "Email" %}</th>
+            <th>{% trans "Action" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for profile in pending %}
+        <tr>
+            <td>{{ profile.user.username }}</td>
+            <td>{{ profile.user.email }}</td>
+            <td>
+                <form method="post" action="{% url 'accounts:user_set_role' profile.user.id %}" style="display:inline">
+                    {% csrf_token %}
+                    <select name="role">
+                        <option value="guest">{% trans "Guest" %}</option>
+                        <option value="resident">{% trans "Resident" %}</option>
+                        <option value="admin">{% trans "Admin" %}</option>
+                    </select>
+                    <button type="submit" class="outline">{% trans "Approve" %}</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>{% trans "No pending users." %}</p>
+{% endif %}
+
+<h2>{% trans "Approved users" %}</h2>
+{% if approved %}
+<table>
+    <thead>
+        <tr>
+            <th>{% trans "User" %}</th>
+            <th>{% trans "Email" %}</th>
+            <th>{% trans "Role" %}</th>
+            <th>{% trans "Action" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for profile in approved %}
+        <tr>
+            <td>{{ profile.user.username }}</td>
+            <td>{{ profile.user.email }}</td>
+            <td><span class="badge badge-{{ profile.role }}">{{ profile.get_role_display }}</span></td>
+            <td>
+                <form method="post" action="{% url 'accounts:user_set_role' profile.user.id %}" style="display:inline">
+                    {% csrf_token %}
+                    <select name="role">
+                        <option value="guest" {% if profile.role == "guest" %}selected{% endif %}>{% trans "Guest" %}</option>
+                        <option value="resident" {% if profile.role == "resident" %}selected{% endif %}>{% trans "Resident" %}</option>
+                        <option value="admin" {% if profile.role == "admin" %}selected{% endif %}>{% trans "Admin" %}</option>
+                        <option value="revoke">{% trans "Revoke" %}</option>
+                    </select>
+                    <button type="submit" class="outline">{% trans "Update" %}</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>{% trans "No approved users." %}</p>
+{% endif %}
+{% endblock %}

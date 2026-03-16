@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Edit" %} {{ device.effective_name }}{% endblock %}
+
+{% block content %}
+<h2>{% trans "Edit" %} {{ device.effective_name }}</h2>
+<form method="post">
+    {% csrf_token %}
+    <label>
+        {% trans "Display name" %}
+        <input type="text" name="display_name" value="{{ device.display_name }}">
+    </label>
+    <label>
+        {% trans "Location" %}
+        <input type="text" name="location" value="{{ device.location }}">
+    </label>
+    <div class="grid">
+        <button type="submit">{% trans "Save" %}</button>
+        <a href="{% url 'devices:detail' device.device_id %}" role="button" class="outline">{% trans "Cancel" %}</a>
+    </div>
+</form>
+{% endblock %}

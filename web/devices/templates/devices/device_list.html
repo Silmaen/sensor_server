@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Devices" %}{% endblock %}
+
+{% block content %}
+<h2>{% trans "Devices" %}</h2>
+<table>
+    <thead>
+        <tr>
+            <th>{% trans "Device" %}</th>
+            <th>{% trans "Type" %}</th>
+            <th>{% trans "Location" %}</th>
+            <th>{% trans "Status" %}</th>
+            <th>{% trans "Last seen" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for device in devices %}
+        <tr>
+            <td><a href="{% url 'devices:detail' device.device_id %}">{{ device.effective_name }}</a></td>
+            <td>{{ device.device_type }}</td>
+            <td>{{ device.location|default:"-" }}</td>
+            <td>
+                <span class="badge {% if device.is_online %}badge-online{% else %}badge-offline{% endif %}">
+                    {% if device.is_online %}{% trans "online" %}{% else %}{% trans "offline" %}{% endif %}
+                </span>
+            </td>
+            <td>{{ device.last_seen|date:"Y-m-d H:i"|default:"-" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

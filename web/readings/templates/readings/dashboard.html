@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load i18n device_tags %}
+{% block title %}{% trans "Dashboard" %}{% endblock %}
+
+{% block content %}
+<div hx-ext="ws" ws-connect="/ws/live/">
+    <h2>{% trans "Dashboard" %}</h2>
+
+    <div class="device-grid" id="device-grid">
+        {% for device in devices %}
+            {% include "devices/_device_card.html" with device=device %}
+        {% empty %}
+            <p>{% trans "No devices detected. Devices will appear automatically when they publish to MQTT." %}</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+var I18N = {
+    online: "{% filter escapejs %}{% trans 'online' %}{% endfilter %}",
+    offline: "{% filter escapejs %}{% trans 'offline' %}{% endfilter %}"
+};
+document.body.addEventListener("htmx:wsAfterMessage", function(evt) {
+    try {
+        const data = JSON.parse(evt.detail.message);
+        if (data.device_id && data.metric !== undefined) {
+            const el = document.getElementById("metric-" + data.device_id + "-" + data.metric);
+            if (el) {
+                el.textContent = data.value;
+            }
+            const ts = document.getElementById("lastseen-" + data.device_id);
+            if (ts) {
+                ts.textContent = new Date(data.time).toLocaleTimeString();
+            }
+            const badge = document.getElementById("status-" + data.device_id);
+            if (badge) {
+                badge.className = "badge badge-online";
+                badge.textContent = I18N.online;
+            }
+        }
+        if (data.device_id && data.is_online !== undefined) {
+            const badge = document.getElementById("status-" + data.device_id);
+            if (badge) {
+                badge.className = data.is_online ? "badge badge-online" : "badge badge-offline";
+                badge.textContent = data.is_online ? I18N.online : I18N.offline;
+            }
+        }
+    } catch(e) {}
+});
+</script>
+{% endblock %}

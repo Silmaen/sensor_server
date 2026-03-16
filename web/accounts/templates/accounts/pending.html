@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Awaiting approval" %}{% endblock %}
+
+{% block content %}
+<article>
+    <header>
+        <h2>{% trans "Awaiting approval" %}</h2>
+    </header>
+    <p>
+        {% blocktrans with name=user.get_full_name|default:user.username %}Welcome <strong>{{ name }}</strong>!{% endblocktrans %}
+    </p>
+    <p>
+        {% trans "Your access request has been recorded. An administrator must first verify that you are not a robot... or a cat walking on a keyboard." %}
+    </p>
+    <p>
+        {% trans "Patience! In the meantime, you can admire this page. It's quite beautiful, isn't it?" %}
+    </p>
+    <footer>
+        <small>{% trans "If you think this is an error, contact the system administrator." %}</small>
+    </footer>
+</article>
+{% endblock %}
