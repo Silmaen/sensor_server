@@ -5,6 +5,7 @@ from .models import UserProfile
 
 # Paths that unapproved users can still access
 EXEMPT_PATHS = [
+    "/healthz/",
     "/oidc/",
     "/admin/",
     "/accounts/login/",

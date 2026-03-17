@@ -149,15 +149,13 @@ LOCALE_PATHS = [BASE_DIR / "locale"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Security — enforce in production
+# Security — TLS is handled by the external reverse proxy, so no
+# SECURE_SSL_REDIRECT / HSTS / Secure cookies here. The proxy sets
+# X-Forwarded-Proto which Django trusts via SECURE_PROXY_SSL_HEADER.
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Logging — persistent files in /app/logs (bind mount to DATA_DIR/logs)
 LOG_DIR = BASE_DIR / "logs"
@@ -168,6 +166,9 @@ LOGGING = {
         "verbose": {
             "format": "{asctime} {levelname} {name} {message}",
             "style": "{",
+        },
+        "json": {
+            "()": "sensor_server.logging.JsonFormatter",
         },
     },
     "handlers": {
@@ -180,7 +181,7 @@ LOGGING = {
             "filename": LOG_DIR / "sensor_server.log",
             "maxBytes": 10 * 1024 * 1024,  # 10 MB
             "backupCount": 5,
-            "formatter": "verbose",
+            "formatter": "json",
         },
     },
     "root": {
@@ -191,6 +192,11 @@ LOGGING = {
         "django": {
             "handlers": ["console", "file"],
             "level": "INFO",
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["console", "file"],
+            "level": "WARNING",
             "propagate": False,
         },
         "mqtt_bridge": {
