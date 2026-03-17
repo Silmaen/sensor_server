@@ -8,6 +8,7 @@ EXEMPT_PATHS = [
     "/healthz/",
     "/oidc/",
     "/admin/",
+    "/i18n/",
     "/accounts/login/",
     "/accounts/pending/",
     "/accounts/logout/",

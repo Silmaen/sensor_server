@@ -25,7 +25,8 @@ class SensorOIDCBackend(OIDCAuthenticationBackend):
         return user
 
     def _update_user_from_claims(self, user, claims):
+        user.username = claims.get("preferred_username", user.username)
         user.first_name = claims.get("given_name", "")
         user.last_name = claims.get("family_name", "")
         user.email = claims.get("email", user.email)
-        user.save(update_fields=["first_name", "last_name", "email"])
+        user.save(update_fields=["username", "first_name", "last_name", "email"])
