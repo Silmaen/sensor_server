@@ -61,6 +61,11 @@ def user_set_role_view(request, user_id):
     if request.method != "POST":
         return HttpResponseForbidden()
     profile = get_object_or_404(UserProfile, user_id=user_id)
+
+    # Protect the env-defined superuser from role changes
+    if profile.user.is_superuser:
+        return HttpResponseForbidden(_("Cannot modify the superuser account."))
+
     role = request.POST.get("role")
     if role in dict(UserProfile.ROLE_CHOICES):
         profile.role = role

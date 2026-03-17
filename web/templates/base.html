@@ -61,6 +61,8 @@
                 <li><a href="{% url 'devices:list' %}">{% trans "Devices" %}</a></li>
                 {% if user_role == "admin" or user.is_superuser %}
                     <li><a href="{% url 'accounts:user_list' %}">{% trans "Users" %}</a></li>
+                {% endif %}
+                {% if user.is_superuser %}
                     <li><a href="{% url 'admin:index' %}">Admin</a></li>
                 {% endif %}
                 <li><small>{{ user.get_full_name|default:user.username }}</small></li>

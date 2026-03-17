@@ -257,3 +257,10 @@ msgstr "Commande vide."
 
 msgid "MQTT publish error."
 msgstr "Erreur d'envoi MQTT."
+
+#: accounts/views.py
+msgid "Cannot modify the superuser account."
+msgstr "Impossible de modifier le compte super-administrateur."
+
+msgid "Protected"
+msgstr "Protégé"

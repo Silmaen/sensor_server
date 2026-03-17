@@ -16,7 +16,7 @@
     <tbody>
         {% for profile in pending %}
         <tr>
-            <td>{{ profile.user.username }}</td>
+            <td>{{ profile.user.get_full_name|default:profile.user.username }}</td>
             <td>{{ profile.user.email }}</td>
             <td>
                 <form method="post" action="{% url 'accounts:user_set_role' profile.user.id %}" style="display:inline">
@@ -51,20 +51,27 @@
     <tbody>
         {% for profile in approved %}
         <tr>
-            <td>{{ profile.user.username }}</td>
+            <td>
+                {{ profile.user.get_full_name|default:profile.user.username }}
+                {% if profile.user.is_superuser %}<span class="badge badge-admin">superuser</span>{% endif %}
+            </td>
             <td>{{ profile.user.email }}</td>
             <td><span class="badge badge-{{ profile.role }}">{{ profile.get_role_display }}</span></td>
             <td>
-                <form method="post" action="{% url 'accounts:user_set_role' profile.user.id %}" style="display:inline">
-                    {% csrf_token %}
-                    <select name="role">
-                        <option value="guest" {% if profile.role == "guest" %}selected{% endif %}>{% trans "Guest" %}</option>
-                        <option value="resident" {% if profile.role == "resident" %}selected{% endif %}>{% trans "Resident" %}</option>
-                        <option value="admin" {% if profile.role == "admin" %}selected{% endif %}>{% trans "Admin" %}</option>
-                        <option value="revoke">{% trans "Revoke" %}</option>
-                    </select>
-                    <button type="submit" class="outline">{% trans "Update" %}</button>
-                </form>
+                {% if profile.user.is_superuser %}
+                    <small>{% trans "Protected" %}</small>
+                {% else %}
+                    <form method="post" action="{% url 'accounts:user_set_role' profile.user.id %}" style="display:inline">
+                        {% csrf_token %}
+                        <select name="role">
+                            <option value="guest" {% if profile.role == "guest" %}selected{% endif %}>{% trans "Guest" %}</option>
+                            <option value="resident" {% if profile.role == "resident" %}selected{% endif %}>{% trans "Resident" %}</option>
+                            <option value="admin" {% if profile.role == "admin" %}selected{% endif %}>{% trans "Admin" %}</option>
+                            <option value="revoke">{% trans "Revoke" %}</option>
+                        </select>
+                        <button type="submit" class="outline">{% trans "Update" %}</button>
+                    </form>
+                {% endif %}
             </td>
         </tr>
         {% endfor %}
