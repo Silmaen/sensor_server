@@ -2,22 +2,131 @@
 {% load i18n %}
 {% block title %}{% trans "Awaiting approval" %}{% endblock %}
 
+{% block extra_head %}
+<style>
+    @keyframes rainbow-bg {
+        0%   { background-color: #ff69b4; }
+        15%  { background-color: #ff1493; }
+        30%  { background-color: #ff00ff; }
+        45%  { background-color: #ff69b4; }
+        60%  { background-color: #ff85c2; }
+        75%  { background-color: #ff1493; }
+        100% { background-color: #ff69b4; }
+    }
+    @keyframes blink-text {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+    @keyframes wobble {
+        0%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(2deg); }
+        75% { transform: rotate(-2deg); }
+    }
+    @keyframes blur-pulse {
+        0%, 100% { filter: blur(0px); }
+        50% { filter: blur(1.5px); }
+    }
+    .troll-zone {
+        animation: rainbow-bg 4s ease-in-out infinite;
+        border: 4px dashed #ff00ff !important;
+        border-radius: 12px;
+        padding: 2rem !important;
+        color: #fff !important;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        box-shadow: 0 0 30px rgba(255, 0, 255, 0.4), inset 0 0 30px rgba(255, 105, 180, 0.2);
+    }
+    .troll-zone h2 {
+        color: #ffff00 !important;
+        text-shadow: 3px 3px 6px #ff00ff, -1px -1px 0 #ff1493;
+        animation: wobble 0.5s ease-in-out infinite;
+        font-size: 2em;
+    }
+    .troll-zone .blink {
+        animation: blink-text 1s step-end infinite;
+        color: #ffff00;
+        font-weight: 900;
+        font-size: 1.3em;
+    }
+    .troll-zone .blur-text {
+        animation: blur-pulse 3s ease-in-out infinite;
+    }
+    .troll-zone p {
+        color: #fff !important;
+        font-size: 1.05em;
+        line-height: 1.6;
+    }
+    .troll-zone .despair {
+        background: rgba(0,0,0,0.3);
+        border-left: 4px solid #ffff00;
+        padding: 0.8em 1em;
+        margin: 1em 0;
+        border-radius: 0 8px 8px 0;
+        font-style: italic;
+    }
+    .troll-zone footer {
+        border-top: 2px dotted rgba(255,255,255,0.3);
+        padding-top: 1em;
+        margin-top: 1.5em;
+    }
+    .troll-zone footer small {
+        color: rgba(255,255,255,0.7) !important;
+        font-size: 0.85em;
+    }
+    .troll-zone marquee {
+        color: #ffff00;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<article>
+<article class="troll-zone">
     <header>
-        <h2>{% trans "Awaiting approval" %}</h2>
+        <h2>&#128721; {% trans "ACCESS DENIED" %} &#128721;</h2>
     </header>
+
     <p>
-        {% blocktrans with name=user.get_full_name|default:user.username %}Welcome <strong>{{ name }}</strong>!{% endblocktrans %}
+        {% blocktrans with name=user.get_full_name|default:user.username %}Well, well, well... <strong>{{ name }}</strong>, look who showed up.{% endblocktrans %}
+    </p>
+
+    <p>
+        {% trans "Your access request has been recorded, timestamped, archived, printed, laminated, and filed in a drawer that nobody ever opens. An administrator will review it when they have absolutely nothing better to do." %}
+    </p>
+
+    <p class="blur-text">
+        {% trans "In the meantime, rest assured that a highly sophisticated algorithm is analyzing your request. Just kidding. It's sitting in a database column, lonely and forgotten, like the last cookie in the box." %}
+    </p>
+
+    <p>
+        {% trans "While you wait, here are some productive activities you could try:" %}
+    </p>
+    <ul>
+        <li>{% trans "Count the pixels on this page" %}</li>
+        <li>{% trans "Reflect on your life choices that led you here" %}</li>
+        <li>{% trans "Learn to knit" %}</li>
+        <li>{% trans "Stare at this page until it changes (spoiler: it won't)" %}</li>
+        <li>{% trans "Write a formal complaint letter to /dev/null" %}</li>
+    </ul>
+
+    <p>
+        <span class="blink">&#9888; {% trans "IMPORTANT NOTICE" %} &#9888;</span>
     </p>
     <p>
-        {% trans "Your access request has been recorded. An administrator must first verify that you are not a robot... or a cat walking on a keyboard." %}
+        {% trans "This page is scientifically engineered to be as unpleasant as possible. If you can read this without squinting, congratulations: you have a higher tolerance for bad design than most humans." %}
     </p>
-    <p>
-        {% trans "Patience! In the meantime, you can admire this page. It's quite beautiful, isn't it?" %}
-    </p>
+
+    <div class="despair">
+        {% trans "If you don't even know how to reach the system administrator, then frankly, your situation is hopeless. Perhaps this system was not meant for you. Perhaps no system was ever meant for you. Perhaps you should go outside and touch grass." %}
+    </div>
+
+    <marquee scrollamount="3">
+        &#127801; {% trans "Please wait... Estimated approval time: between now and the heat death of the universe." %} &#127801;
+    </marquee>
+
     <footer>
-        <small>{% trans "If you think this is an error, contact the system administrator." %}</small>
+        <small>
+            {% trans "No administrators were harmed in the making of this page. No users were respected either." %}
+        </small>
     </footer>
 </article>
 {% endblock %}

@@ -150,10 +150,10 @@ LOCALE_PATHS = [BASE_DIR / "locale"]
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Security — TLS is handled by the external reverse proxy, so no
-# SECURE_SSL_REDIRECT / HSTS / Secure cookies here. The proxy sets
-# X-Forwarded-Proto which Django trusts via SECURE_PROXY_SSL_HEADER.
+# SECURE_SSL_REDIRECT / HSTS here. The proxy sets X-Forwarded-Proto
+# which Django trusts via SECURE_PROXY_SSL_HEADER.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 if not DEBUG:
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 

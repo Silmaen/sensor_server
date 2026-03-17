@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: sensor_server 1.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-03-16 00:00+0000\n"
-"PO-Revision-Date: 2026-03-16 00:00+0000\n"
+"PO-Revision-Date: 2026-03-17 00:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Language: fr\n"
@@ -30,7 +30,7 @@ msgid "Users"
 msgstr "Utilisateurs"
 
 msgid "Log out"
-msgstr "Deconnexion"
+msgstr "Déconnexion"
 
 msgid "Log in"
 msgstr "Connexion"
@@ -58,17 +58,50 @@ msgstr "Identifiants invalides."
 msgid "Awaiting approval"
 msgstr "En attente d'autorisation"
 
-msgid "Welcome <strong>%(name)s</strong>!"
-msgstr "Bienvenue <strong>%(name)s</strong> !"
+msgid "ACCESS DENIED"
+msgstr "ACCÈS REFUSÉ"
 
-msgid "Your access request has been recorded. An administrator must first verify that you are not a robot... or a cat walking on a keyboard."
-msgstr "Votre demande d'acces a ete enregistree. Un administrateur doit d'abord verifier que vous n'etes pas un robot... ou un chat qui marche sur un clavier."
+msgid "Well, well, well... <strong>%(name)s</strong>, look who showed up."
+msgstr "Tiens, tiens, tiens... <strong>%(name)s</strong>, regardez qui se pointe."
 
-msgid "Patience! In the meantime, you can admire this page. It's quite beautiful, isn't it?"
-msgstr "Patience ! En attendant, vous pouvez toujours admirer cette page. Elle est tres belle, non ?"
+msgid "Your access request has been recorded, timestamped, archived, printed, laminated, and filed in a drawer that nobody ever opens. An administrator will review it when they have absolutely nothing better to do."
+msgstr "Votre demande d'accès a été enregistrée, horodatée, archivée, imprimée, plastifiée, et classée dans un tiroir que personne n'ouvre jamais. Un administrateur l'examinera quand il n'aura absolument rien de mieux à faire."
 
-msgid "If you think this is an error, contact the system administrator."
-msgstr "Si vous pensez qu'il y a une erreur, contactez l'administrateur du systeme."
+msgid "In the meantime, rest assured that a highly sophisticated algorithm is analyzing your request. Just kidding. It's sitting in a database column, lonely and forgotten, like the last cookie in the box."
+msgstr "En attendant, soyez rassuré : un algorithme hautement sophistiqué analyse votre demande. Non, je rigole. Elle croupit dans une colonne de base de données, seule et oubliée, comme le dernier gâteau dans la boîte."
+
+msgid "While you wait, here are some productive activities you could try:"
+msgstr "En attendant, voici quelques activités productives que vous pourriez tenter :"
+
+msgid "Count the pixels on this page"
+msgstr "Compter les pixels de cette page"
+
+msgid "Reflect on your life choices that led you here"
+msgstr "Méditer sur les choix de vie qui vous ont mené ici"
+
+msgid "Learn to knit"
+msgstr "Apprendre à tricoter"
+
+msgid "Stare at this page until it changes (spoiler: it won't)"
+msgstr "Fixer cette page jusqu'à ce qu'elle change (spoiler : elle ne changera pas)"
+
+msgid "Write a formal complaint letter to /dev/null"
+msgstr "Écrire une lettre de réclamation formelle à /dev/null"
+
+msgid "IMPORTANT NOTICE"
+msgstr "AVIS IMPORTANT"
+
+msgid "This page is scientifically engineered to be as unpleasant as possible. If you can read this without squinting, congratulations: you have a higher tolerance for bad design than most humans."
+msgstr "Cette page est scientifiquement conçue pour être aussi désagréable que possible. Si vous arrivez à la lire sans plisser les yeux, félicitations : vous avez une tolérance au mauvais goût supérieure à la moyenne de l'espèce humaine."
+
+msgid "If you don't even know how to reach the system administrator, then frankly, your situation is hopeless. Perhaps this system was not meant for you. Perhaps no system was ever meant for you. Perhaps you should go outside and touch grass."
+msgstr "Si vous ne savez même pas comment contacter l'administrateur système, alors franchement, votre cas est désespéré. Peut-être que ce système n'était pas fait pour vous. Peut-être qu'aucun système n'a jamais été fait pour vous. Peut-être devriez-vous sortir prendre l'air et toucher de l'herbe."
+
+msgid "Please wait... Estimated approval time: between now and the heat death of the universe."
+msgstr "Veuillez patienter... Délai d'approbation estimé : entre maintenant et la mort thermique de l'univers."
+
+msgid "No administrators were harmed in the making of this page. No users were respected either."
+msgstr "Aucun administrateur n'a été blessé lors de la création de cette page. Aucun utilisateur n'a été respecté non plus."
 
 #: accounts/templates/accounts/user_list.html
 msgid "User management"
@@ -78,13 +111,13 @@ msgid "Pending users"
 msgstr "Utilisateurs en attente"
 
 msgid "Approved users"
-msgstr "Utilisateurs approuves"
+msgstr "Utilisateurs approuvés"
 
 msgid "No pending users."
 msgstr "Aucun utilisateur en attente."
 
 msgid "No approved users."
-msgstr "Aucun utilisateur approuve."
+msgstr "Aucun utilisateur approuvé."
 
 msgid "User"
 msgstr "Utilisateur"
@@ -96,7 +129,7 @@ msgid "Action"
 msgstr "Action"
 
 msgid "Role"
-msgstr "Role"
+msgstr "Rôle"
 
 msgid "Approve"
 msgstr "Approuver"
@@ -105,11 +138,11 @@ msgid "Update"
 msgstr "Modifier"
 
 msgid "Revoke"
-msgstr "Revoquer"
+msgstr "Révoquer"
 
 #: accounts/models.py
 msgid "Guest"
-msgstr "Invite"
+msgstr "Invité"
 
 msgid "Resident"
 msgstr "Habitant"
@@ -122,7 +155,7 @@ msgstr "en attente"
 
 #: accounts/decorators.py
 msgid "You do not have the required permissions."
-msgstr "Vous n'avez pas les permissions necessaires."
+msgstr "Vous n'avez pas les permissions nécessaires."
 
 #: devices/templates
 msgid "Device"
@@ -147,7 +180,7 @@ msgid "offline"
 msgstr "hors ligne"
 
 msgid "Location not set"
-msgstr "Emplacement non defini"
+msgstr "Emplacement non défini"
 
 msgid "Seen:"
 msgstr "Vu :"
@@ -168,16 +201,16 @@ msgid "History"
 msgstr "Historique"
 
 msgid "Metric:"
-msgstr "Metrique :"
+msgstr "Métrique :"
 
 msgid "Temperature"
-msgstr "Temperature"
+msgstr "Température"
 
 msgid "Humidity"
-msgstr "Humidite"
+msgstr "Humidité"
 
 msgid "Period:"
-msgstr "Periode :"
+msgstr "Période :"
 
 msgid "3 days"
 msgstr "3 jours"
@@ -213,10 +246,10 @@ msgid "No"
 msgstr "Non"
 
 msgid "No commands sent."
-msgstr "Aucune commande envoyee."
+msgstr "Aucune commande envoyée."
 
 msgid "No devices detected. Devices will appear automatically when they publish to MQTT."
-msgstr "Aucun appareil detecte. Les appareils apparaitront automatiquement quand ils publieront sur MQTT."
+msgstr "Aucun appareil détecté. Les appareils apparaîtront automatiquement quand ils publieront sur MQTT."
 
 #: devices/views.py
 msgid "Empty command."

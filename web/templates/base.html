@@ -1,35 +1,59 @@
-{% load i18n %}
+{% load i18n static %}
 <!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% trans "IoT Sensors" %}{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'logo.svg' %}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <script src="https://unpkg.com/htmx-ext-ws@2.0.2/ws.js"></script>
     <style>
-        :root { --pico-font-size: 16px; }
+        :root, [data-theme="light"] {
+            --pico-font-size: 16px;
+            --pico-primary: #e67e22;
+            --pico-primary-hover: #d35400;
+            --pico-primary-focus: rgba(230, 126, 34, 0.25);
+            --pico-primary-inverse: #fff;
+            --pico-primary-background: #e67e22;
+            --pico-primary-hover-background: #d35400;
+            --pico-primary-border: #e67e22;
+            --pico-primary-hover-border: #d35400;
+            --pico-primary-underline: rgba(230, 126, 34, 0.5);
+        }
+        [data-theme="dark"], :root:not([data-theme="light"]) {
+            --pico-primary: #e67e22;
+            --pico-primary-hover: #f39c12;
+            --pico-primary-focus: rgba(230, 126, 34, 0.25);
+            --pico-primary-inverse: #fff;
+            --pico-primary-background: #e67e22;
+            --pico-primary-hover-background: #f39c12;
+            --pico-primary-border: #e67e22;
+            --pico-primary-hover-border: #f39c12;
+            --pico-primary-underline: rgba(230, 126, 34, 0.5);
+        }
         .badge { display: inline-block; padding: 0.15em 0.5em; border-radius: 4px; font-size: 0.8em; font-weight: 600; }
         .badge-online { background: #2ecc40; color: #fff; }
         .badge-offline { background: #aaa; color: #fff; }
-        .badge-pending { background: #ff851b; color: #fff; }
-        .badge-guest { background: #7fdbff; color: #111; }
-        .badge-resident { background: #0074d9; color: #fff; }
-        .badge-admin { background: #b10dc9; color: #fff; }
+        .badge-pending { background: #e67e22; color: #fff; }
+        .badge-guest { background: #f39c12; color: #111; }
+        .badge-resident { background: #e67e22; color: #fff; }
+        .badge-admin { background: #d35400; color: #fff; }
         .device-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
         .device-card { border: 1px solid var(--pico-muted-border-color); border-radius: 8px; padding: 1rem; }
         .device-card h4 { margin-bottom: 0.3rem; }
         nav ul li.active > a { font-weight: bold; text-decoration: underline; }
-        .lang-switch { display: inline; margin: 0; }
-        .lang-switch button { background: none; border: none; padding: 0; margin: 0; cursor: pointer; font-size: 0.9em; text-decoration: underline; color: inherit; }
+        .lang-select { position: relative; display: inline-block; margin: 0; }
+        .lang-select select { appearance: none; background: none; border: none; color: inherit; cursor: pointer; font-size: 0.9em; padding: 0.2em 1.4em 0.2em 0.2em; }
+        .lang-select::after { content: "\25BE"; position: absolute; right: 0.3em; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 0.7em; }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body>
     <nav class="container-fluid">
         <ul>
-            <li><strong>{% trans "IoT Sensors" %}</strong></li>
+            <li><img src="{% static 'logo.svg' %}" alt="Logo" style="height:2rem;vertical-align:middle;margin-right:0.4rem"><strong>{% trans "IoT Sensors" %}</strong></li>
         </ul>
         <ul>
             {% if user.is_authenticated and is_approved %}
@@ -39,6 +63,7 @@
                     <li><a href="{% url 'accounts:user_list' %}">{% trans "Users" %}</a></li>
                     <li><a href="{% url 'admin:index' %}">Admin</a></li>
                 {% endif %}
+                <li><small>{{ user.get_full_name|default:user.username }}</small></li>
                 <li>
                     <form method="post" action="{% url 'accounts:logout' %}" style="margin:0">
                         {% csrf_token %}
@@ -46,6 +71,7 @@
                     </form>
                 </li>
             {% elif user.is_authenticated %}
+                <li><small>{{ user.get_full_name|default:user.username }}</small></li>
                 <li>
                     <form method="post" action="{% url 'accounts:logout' %}" style="margin:0">
                         {% csrf_token %}
@@ -56,17 +82,14 @@
                 <li><a href="{{ LOGIN_URL }}">{% trans "Log in" %}</a></li>
             {% endif %}
             <li>
-                <form method="post" action="{% url 'set_language' %}" class="lang-switch">
+                <form method="post" action="{% url 'set_language' %}" class="lang-select">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.path }}">
                     {% get_current_language as CURRENT_LANG %}
-                    {% if CURRENT_LANG == "fr" %}
-                        <input type="hidden" name="language" value="en">
-                        <button type="submit" title="Switch to English">EN</button>
-                    {% else %}
-                        <input type="hidden" name="language" value="fr">
-                        <button type="submit" title="Passer en français">FR</button>
-                    {% endif %}
+                    <select name="language" onchange="this.form.submit()">
+                        <option value="en" {% if CURRENT_LANG == "en" %}selected{% endif %}>&#127468;&#127463; EN</option>
+                        <option value="fr" {% if CURRENT_LANG == "fr" %}selected{% endif %}>&#127467;&#127479; FR</option>
+                    </select>
                 </form>
             </li>
         </ul>
