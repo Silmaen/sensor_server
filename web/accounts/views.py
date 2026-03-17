@@ -13,10 +13,7 @@ from .models import UserProfile
 
 
 def login_view(request):
-    """Local login fallback — used when OIDC is not configured."""
-    if settings.OIDC_ENABLED:
-        return redirect(settings.LOGIN_URL)
-
+    """Local login — always available, even when OIDC is enabled."""
     error = None
     if request.method == "POST":
         username = request.POST.get("username", "")

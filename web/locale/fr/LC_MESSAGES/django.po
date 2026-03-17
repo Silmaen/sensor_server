@@ -35,6 +35,12 @@ msgstr "Deconnexion"
 msgid "Log in"
 msgstr "Connexion"
 
+msgid "Sign in with SSO"
+msgstr "Se connecter via SSO"
+
+msgid "Local account"
+msgstr "Compte local"
+
 #: accounts/templates/accounts/login.html
 msgid "Username"
 msgstr "Utilisateur"

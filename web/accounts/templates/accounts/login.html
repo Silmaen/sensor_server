@@ -7,6 +7,14 @@
     <header>
         <h2>{% trans "Log in" %}</h2>
     </header>
+
+    {% if OIDC_ENABLED %}
+    <a href="{% url 'oidc_authentication_init' %}" role="button" style="width:100%">{% trans "Sign in with SSO" %}</a>
+    <hr>
+    <details>
+        <summary>{% trans "Local account" %}</summary>
+    {% endif %}
+
     {% if error %}
         <p style="color: var(--pico-del-color);">{{ error }}</p>
     {% endif %}
@@ -14,13 +22,17 @@
         {% csrf_token %}
         <label>
             {% trans "Username" %}
-            <input type="text" name="username" required autofocus>
+            <input type="text" name="username" required {% if not OIDC_ENABLED %}autofocus{% endif %}>
         </label>
         <label>
             {% trans "Password" %}
             <input type="password" name="password" required>
         </label>
-        <button type="submit">{% trans "Sign in" %}</button>
+        <button type="submit" {% if OIDC_ENABLED %}class="outline"{% endif %}>{% trans "Sign in" %}</button>
     </form>
+
+    {% if OIDC_ENABLED %}
+    </details>
+    {% endif %}
 </article>
 {% endblock %}

@@ -116,7 +116,7 @@ AUTHENTICATION_BACKENDS = ["django.contrib.auth.backends.ModelBackend"]
 if OIDC_ENABLED:
     AUTHENTICATION_BACKENDS.insert(0, "accounts.backends.SensorOIDCBackend")
 
-LOGIN_URL = "/oidc/authenticate/" if OIDC_ENABLED else "/accounts/login/"
+LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 
