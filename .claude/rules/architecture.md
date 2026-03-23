@@ -2,9 +2,9 @@
 
 ## Django apps
 - `accounts` — auth, roles, OIDC backend, middleware. No account management beyond roles.
-- `devices` — device registry, command sending via MQTT.
+- `devices` — device registry, approval workflow, capabilities discovery, command sending via MQTT.
 - `readings` — sensor data (TimescaleDB hypertable), dashboard, charts, WebSocket consumers.
-- `mqtt_bridge` — MQTT subscriber worker, auto-discovery, ingestion services.
+- `mqtt_bridge` — MQTT subscriber worker, auto-discovery, ingestion services, capabilities handler.
 
 ## Database
 - TimescaleDB hypertable for sensor readings — `managed = False` in Django, raw SQL migrations.

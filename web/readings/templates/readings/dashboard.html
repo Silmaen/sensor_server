@@ -40,11 +40,16 @@ document.body.addEventListener("htmx:wsAfterMessage", function(evt) {
                 badge.textContent = I18N.online;
             }
         }
-        if (data.device_id && data.is_online !== undefined) {
-            const badge = document.getElementById("status-" + data.device_id);
-            if (badge) {
-                badge.className = data.is_online ? "badge badge-online" : "badge badge-offline";
-                badge.textContent = data.is_online ? I18N.online : I18N.offline;
+        if (data.device_id && data.alert_level !== undefined) {
+            const alertEl = document.getElementById("alert-" + data.device_id);
+            if (alertEl) {
+                if (data.alert_level) {
+                    alertEl.className = "badge " + (data.alert_level === "error" ? "badge-error" : "badge-warning");
+                    alertEl.textContent = data.alert_level + (data.alert_message ? ": " + data.alert_message : "");
+                    alertEl.style.display = "";
+                } else {
+                    alertEl.style.display = "none";
+                }
             }
         }
     } catch(e) {}

@@ -14,11 +14,71 @@
         <span class="badge {% if device.is_online %}badge-online{% else %}badge-offline{% endif %}">
             {% if device.is_online %}{% trans "online" %}{% else %}{% trans "offline" %}{% endif %}
         </span>
+        {% if device.is_approved %}
+            <span class="badge badge-online">{% trans "approved" %}</span>
+        {% else %}
+            <span class="badge badge-offline">{% trans "pending approval" %}</span>
+        {% endif %}
         {% if user|has_role:"admin" %}
             <a href="{% url 'devices:edit' device.device_id %}" role="button" class="outline">{% trans "Edit" %}</a>
         {% endif %}
     </p>
 </hgroup>
+
+{% if device.alert_level %}
+<p class="alert-{{ device.alert_level }}">
+    <strong>{{ device.alert_level|upper }}:</strong> {{ device.alert_message|default:"-" }}
+</p>
+{% endif %}
+
+{% if device.hardware_id %}
+<p><strong>{% trans "Hardware ID:" %}</strong> <code>{{ device.hardware_id }}</code></p>
+{% endif %}
+
+{% if device.capabilities or device.publish_interval %}
+<details open>
+    <summary>{% trans "Capabilities" %}</summary>
+    {% if device.publish_interval %}
+    <p><strong>{% trans "Publish interval:" %}</strong> {{ device.publish_interval }}s</p>
+    {% endif %}
+    {% if device.capabilities.metrics %}
+    <p><strong>{% trans "Metrics:" %}</strong>
+        {% for m in device.capabilities.metrics %}
+            <code>{{ m }}</code>{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+    </p>
+    {% endif %}
+    {% if device.capabilities.commands %}
+    <p><strong>{% trans "Accepted commands:" %}</strong>
+        {% for c in device.capabilities.commands %}
+            <code>{{ c }}</code>{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+    </p>
+    {% endif %}
+</details>
+{% endif %}
+
+{% if user|has_role:"admin" %}
+<div class="grid">
+    {% if not device.is_approved %}
+    <form hx-post="{% url 'devices:approve' device.device_id %}" hx-swap="none">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="approve">
+        <button type="submit">{% trans "Approve device" %}</button>
+    </form>
+    {% else %}
+    <form hx-post="{% url 'devices:approve' device.device_id %}" hx-swap="none">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="revoke">
+        <button type="submit" class="secondary">{% trans "Revoke approval" %}</button>
+    </form>
+    {% endif %}
+    <form hx-post="{% url 'devices:request_capabilities' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML">
+        {% csrf_token %}
+        <button type="submit" class="outline">{% trans "Request capabilities" %}</button>
+    </form>
+</div>
+{% endif %}
 
 <h3>{% trans "History" %}</h3>
 <div>

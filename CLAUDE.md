@@ -48,12 +48,16 @@ curl http://localhost:8000/healthz/
 
 - **Language**: all code, comments, docstrings, and commit messages in English
 - **i18n**: all user-facing strings use `{% trans %}` in templates, `gettext_lazy` / `gettext` in Python. Default language is English; French translations in `web/locale/fr/`
-- **MQTT topics**: `{device_type}/{device_id}/sensors|status|command`
+- **MQTT topics**: `{device_type}/{device_id}/sensors|status|command|capabilities`
 - **Sensor schema**: narrow table (one row per metric), managed as TimescaleDB hypertable (`managed = False` in Django model, raw SQL migration)
 - **TimescaleDB policies**: continuous aggregates (hourly/daily), compression after 7 days, retention 90 days on raw data
 - **Roles**: `None` (pending) < `guest` < `resident` < `admin`. Enforced by `@role_required` decorator + `RoleMiddleware`
 - **Templates**: Pico CSS + HTMX (CDN) — no JS framework, no npm. Only JS is ECharts init blocks
 - **Static files**: served by WhiteNoise, `collectstatic` runs in entrypoint
+- **Device approval**: auto-discovered devices default to `is_approved=False`; sensor data is dropped until an admin approves. Capabilities (hardware ID, metrics, commands, publish interval) are auto-requested on discovery, reconnection, and after every command. 60s timeout; no response → `error` alert.
+- **Online detection**: computed from `last_seen` and `publish_interval` (offline if no data for 3× interval; default 5 min timeout when interval unknown). `is_online` is a model property, not a DB field.
+- **Status topic**: devices publish alerts (`warning`/`error`) as JSON, not online/offline. Online status is computed server-side.
+- **Protocol doc**: full MQTT protocol spec in `docs/mqtt-protocol.md`
 - **Security**: CSRF on all forms, logout is POST-only, WebSocket origin validation, MQTT identifier sanitization, `SECURE_*` settings enforced when `DEBUG=False`
 - **Logging**: structured JSON to file (`sensor_server.logging.JsonFormatter`), plain text to console
 - **Persistent data**: all under `$DATA_DIR` (timescaledb, mosquitto, redis, logs, certs, backups) via bind mounts

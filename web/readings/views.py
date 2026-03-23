@@ -15,7 +15,7 @@ from .models import SensorReading
 
 @role_required("guest")
 def dashboard_view(request):
-    devices = Device.objects.all()
+    devices = Device.objects.filter(is_approved=True)
     return render(request, "readings/dashboard.html", {"devices": devices})
 
 

@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 
 from accounts.decorators import role_required
+from mqtt_bridge.services import request_capabilities
 
 from .models import CommandLog, Device
 
@@ -17,7 +18,13 @@ logger = logging.getLogger(__name__)
 @role_required("guest")
 def device_list_view(request):
     devices = Device.objects.all()
-    return render(request, "devices/device_list.html", {"devices": devices})
+    pending_devices = devices.filter(is_approved=False)
+    approved_devices = devices.filter(is_approved=True)
+    return render(request, "devices/device_list.html", {
+        "devices": devices,
+        "pending_devices": pending_devices,
+        "approved_devices": approved_devices,
+    })
 
 
 @role_required("guest")
@@ -78,6 +85,55 @@ def device_command_view(request, device_id):
     CommandLog.objects.create(
         device=device,
         command=command_data,
+        sent_by=request.user,
+    )
+
+    # Re-request capabilities as the command may have changed them
+    request_capabilities(device)
+
+    if request.headers.get("HX-Request"):
+        commands = device.commands.select_related("sent_by")[:20]
+        return render(request, "devices/_command_log.html", {"commands": commands})
+
+    return redirect("devices:detail", device_id=device.device_id)
+
+
+@role_required("admin")
+def device_approve_view(request, device_id):
+    device = get_object_or_404(Device, device_id=device_id)
+    if request.method != "POST":
+        return HttpResponseBadRequest()
+
+    action = request.POST.get("action", "")
+    if action == "approve":
+        device.is_approved = True
+        device.save(update_fields=["is_approved"])
+    elif action == "revoke":
+        device.is_approved = False
+        device.save(update_fields=["is_approved"])
+
+    if request.headers.get("HX-Request"):
+        pending_devices = Device.objects.filter(is_approved=False)
+        approved_devices = Device.objects.filter(is_approved=True)
+        return render(request, "devices/_device_tables.html", {
+            "pending_devices": pending_devices,
+            "approved_devices": approved_devices,
+        })
+
+    return redirect("devices:list")
+
+
+@role_required("admin")
+def device_request_capabilities_view(request, device_id):
+    device = get_object_or_404(Device, device_id=device_id)
+    if request.method != "POST":
+        return HttpResponseBadRequest()
+
+    request_capabilities(device)
+
+    CommandLog.objects.create(
+        device=device,
+        command={"action": "request_capabilities"},
         sent_by=request.user,
     )
 

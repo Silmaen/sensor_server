@@ -5,6 +5,11 @@
         <span id="status-{{ device.device_id }}" class="badge {% if device.is_online %}badge-online{% else %}badge-offline{% endif %}">
             {% if device.is_online %}{% trans "online" %}{% else %}{% trans "offline" %}{% endif %}
         </span>
+        {% if device.alert_level %}
+        <span id="alert-{{ device.device_id }}" class="badge {% if device.alert_level == 'error' %}badge-error{% else %}badge-warning{% endif %}">
+            {{ device.alert_level }}{% if device.alert_message %}: {{ device.alert_message }}{% endif %}
+        </span>
+        {% endif %}
     </h4>
     <small>{{ device.device_type }} &mdash; {% if device.location %}{{ device.location }}{% else %}{% trans "Location not set" %}{% endif %}</small>
     <div id="metrics-{{ device.device_id }}" style="margin-top:0.5rem;">

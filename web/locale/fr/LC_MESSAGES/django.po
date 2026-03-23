@@ -258,6 +258,52 @@ msgstr "Commande vide."
 msgid "MQTT publish error."
 msgstr "Erreur d'envoi MQTT."
 
+#: devices/templates (approval & capabilities)
+msgid "Pending approval"
+msgstr "En attente d'approbation"
+
+msgid "Approved devices"
+msgstr "Appareils approuvés"
+
+msgid "approved"
+msgstr "approuvé"
+
+msgid "pending approval"
+msgstr "en attente d'approbation"
+
+msgid "Approve device"
+msgstr "Approuver l'appareil"
+
+msgid "Revoke approval"
+msgstr "Révoquer l'approbation"
+
+msgid "Request capabilities"
+msgstr "Demander les capacités"
+
+msgid "Hardware ID:"
+msgstr "ID matériel :"
+
+msgid "Capabilities"
+msgstr "Capacités"
+
+msgid "Metrics:"
+msgstr "Métriques :"
+
+msgid "Accepted commands:"
+msgstr "Commandes acceptées :"
+
+msgid "Publish interval:"
+msgstr "Intervalle de publication :"
+
+msgid "Online"
+msgstr "En ligne"
+
+msgid "Offline"
+msgstr "Hors ligne"
+
+msgid "online status"
+msgstr "statut de connexion"
+
 #: accounts/views.py
 msgid "Cannot modify the superuser account."
 msgstr "Impossible de modifier le compte super-administrateur."

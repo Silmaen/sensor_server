@@ -1,0 +1,84 @@
+{% load i18n device_tags %}
+
+{% if pending_devices %}
+<h3>{% trans "Pending approval" %}</h3>
+<table>
+    <thead>
+        <tr>
+            <th>{% trans "Device" %}</th>
+            <th>{% trans "Type" %}</th>
+            <th>{% trans "Last seen" %}</th>
+            {% if user|has_role:"admin" %}
+            <th>{% trans "Action" %}</th>
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for device in pending_devices %}
+        <tr>
+            <td><a href="{% url 'devices:detail' device.device_id %}">{{ device.effective_name }}</a></td>
+            <td>{{ device.device_type }}</td>
+            <td>{{ device.last_seen|date:"Y-m-d H:i"|default:"-" }}</td>
+            {% if user|has_role:"admin" %}
+            <td>
+                <form hx-post="{% url 'devices:approve' device.device_id %}" hx-target="#device-tables" hx-swap="innerHTML" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="approve">
+                    <button type="submit" class="outline">{% trans "Approve" %}</button>
+                </form>
+            </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<h3>{% trans "Approved devices" %}</h3>
+{% if approved_devices %}
+<table>
+    <thead>
+        <tr>
+            <th>{% trans "Device" %}</th>
+            <th>{% trans "Type" %}</th>
+            <th>{% trans "Location" %}</th>
+            <th>{% trans "Status" %}</th>
+            <th>{% trans "Last seen" %}</th>
+            {% if user|has_role:"admin" %}
+            <th>{% trans "Action" %}</th>
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for device in approved_devices %}
+        <tr>
+            <td><a href="{% url 'devices:detail' device.device_id %}">{{ device.effective_name }}</a></td>
+            <td>{{ device.device_type }}</td>
+            <td>{{ device.location|default:"-" }}</td>
+            <td>
+                <span class="badge {% if device.is_online %}badge-online{% else %}badge-offline{% endif %}">
+                    {% if device.is_online %}{% trans "online" %}{% else %}{% trans "offline" %}{% endif %}
+                </span>
+                {% if device.alert_level %}
+                <span class="badge {% if device.alert_level == 'error' %}badge-error{% else %}badge-warning{% endif %}">
+                    {{ device.alert_level }}
+                </span>
+                {% endif %}
+            </td>
+            <td>{{ device.last_seen|date:"Y-m-d H:i"|default:"-" }}</td>
+            {% if user|has_role:"admin" %}
+            <td>
+                <form hx-post="{% url 'devices:approve' device.device_id %}" hx-target="#device-tables" hx-swap="innerHTML" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="revoke">
+                    <button type="submit" class="outline secondary">{% trans "Revoke" %}</button>
+                </form>
+            </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p><small>{% trans "No devices detected. Devices will appear automatically when they publish to MQTT." %}</small></p>
+{% endif %}

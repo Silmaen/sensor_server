@@ -2,11 +2,13 @@ import json
 import logging
 import re
 
+import paho.mqtt.publish as mqtt_publish
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from django.conf import settings
 from django.utils import timezone as dj_timezone
 
-from devices.models import Device
+from devices.models import CAPABILITIES_RESPONSE_TIMEOUT, Device
 from readings.models import SensorReading
 
 logger = logging.getLogger(__name__)
@@ -31,6 +33,26 @@ def parse_topic(topic: str) -> tuple[str, str, str] | None:
         logger.warning("Rejected unsafe topic identifiers: %s", topic)
         return None
     return device_type, device_id, msg_type
+
+
+def request_capabilities(device: Device):
+    """Send a request_capabilities command to a device via MQTT."""
+    topic = f"{device.device_type}/{device.device_id}/command"
+    payload = json.dumps({"action": "request_capabilities"})
+    try:
+        mqtt_publish.single(
+            topic,
+            payload=payload,
+            hostname=settings.MQTT_HOST,
+            port=settings.MQTT_PORT,
+            auth={"username": settings.MQTT_USER, "password": settings.MQTT_PASSWORD},
+            retain=False,
+        )
+        device.capabilities_requested_at = dj_timezone.now()
+        device.save(update_fields=["capabilities_requested_at"])
+        logger.info("Requested capabilities from %s", device.device_id)
+    except Exception:
+        logger.exception("Failed to request capabilities from %s", device.device_id)
 
 
 def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
@@ -59,9 +81,28 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
     if created:
         logger.info("Auto-discovered device: %s (type=%s)", device_id, device_type)
 
-    device.is_online = True
+    # Detect reconnection (was offline) before updating last_seen
+    was_online = device.is_online
+
     device.last_seen = now
-    device.save(update_fields=["is_online", "last_seen"])
+    device.save(update_fields=["last_seen"])
+
+    # Request capabilities on new device or reconnection
+    if created or not was_online:
+        request_capabilities(device)
+    elif device.capabilities_requested_at is not None:
+        # Check for capabilities response timeout
+        elapsed = (now - device.capabilities_requested_at).total_seconds()
+        if elapsed > CAPABILITIES_RESPONSE_TIMEOUT:
+            device.alert_level = "error"
+            device.alert_message = "no_capabilities_response"
+            device.capabilities_requested_at = None
+            device.save(update_fields=["alert_level", "alert_message", "capabilities_requested_at"])
+            logger.warning("Capabilities response timeout for %s", device_id)
+
+    if not device.is_approved:
+        logger.info("Dropping sensor data from unapproved device: %s", device_id)
+        return
 
     # Insert readings
     readings = []
@@ -100,21 +141,44 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
 
 
 def handle_status_message(device_type: str, device_id: str, payload: bytes):
-    """Process a device status (online/offline) message."""
-    status = payload.decode("utf-8", errors="replace").strip().lower()
-    is_online = status == "online"
+    """Process a device status (warning/error) message."""
+    if len(payload) > MAX_PAYLOAD_SIZE:
+        logger.warning("Status payload too large from %s/%s", device_type, device_id)
+        return
 
-    device, created = Device.objects.get_or_create(
-        device_id=device_id,
-        defaults={"device_type": device_type},
-    )
-    if created:
-        logger.info("Auto-discovered device via status: %s (type=%s)", device_id, device_type)
+    try:
+        data = json.loads(payload)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.warning("Invalid status JSON from %s/%s", device_type, device_id)
+        return
 
-    device.is_online = is_online
-    if is_online:
-        device.last_seen = dj_timezone.now()
-    device.save(update_fields=["is_online", "last_seen"])
+    if not isinstance(data, dict):
+        logger.warning("Non-dict status from %s/%s", device_type, device_id)
+        return
+
+    try:
+        device = Device.objects.get(device_id=device_id)
+    except Device.DoesNotExist:
+        logger.warning("Status from unknown device: %s", device_id)
+        return
+
+    level = data.get("level", "")
+    if level not in ("", "ok", "warning", "error"):
+        logger.warning("Invalid alert level from %s: %s", device_id, level)
+        return
+
+    # "ok" clears the alert
+    if level in ("", "ok"):
+        device.alert_level = ""
+        device.alert_message = ""
+    else:
+        device.alert_level = level
+        message = data.get("message", "")
+        if isinstance(message, str):
+            device.alert_message = message[:256]
+
+    device.last_seen = dj_timezone.now()
+    device.save(update_fields=["alert_level", "alert_message", "last_seen"])
 
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
@@ -123,8 +187,61 @@ def handle_status_message(device_type: str, device_id: str, payload: bytes):
             "type": "device_status",
             "status": {
                 "device_id": device_id,
-                "is_online": is_online,
+                "alert_level": device.alert_level,
+                "alert_message": device.alert_message,
                 "device_name": device.effective_name,
             },
         },
     )
+
+
+def handle_capabilities_message(device_type: str, device_id: str, payload: bytes):
+    """Process a capabilities response from a device."""
+    if len(payload) > MAX_PAYLOAD_SIZE:
+        logger.warning("Capabilities payload too large from %s/%s", device_type, device_id)
+        return
+
+    try:
+        data = json.loads(payload)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.warning("Invalid capabilities JSON from %s/%s", device_type, device_id)
+        return
+
+    if not isinstance(data, dict):
+        logger.warning("Non-dict capabilities from %s/%s", device_type, device_id)
+        return
+
+    try:
+        device = Device.objects.get(device_id=device_id)
+    except Device.DoesNotExist:
+        logger.warning("Capabilities from unknown device: %s", device_id)
+        return
+
+    hardware_id = data.get("hardware_id", "")
+    if isinstance(hardware_id, str) and len(hardware_id) <= 256:
+        device.hardware_id = hardware_id
+
+    publish_interval = data.get("publish_interval", 0)
+    if isinstance(publish_interval, (int, float)) and 0 < publish_interval <= 86400:
+        device.publish_interval = int(publish_interval)
+
+    capabilities = {}
+    if isinstance(data.get("metrics"), list):
+        capabilities["metrics"] = [
+            m for m in data["metrics"]
+            if isinstance(m, str) and SAFE_IDENTIFIER_RE.match(m)
+        ]
+    if isinstance(data.get("commands"), list):
+        capabilities["commands"] = [
+            c for c in data["commands"]
+            if isinstance(c, str) and SAFE_IDENTIFIER_RE.match(c)
+        ]
+    device.capabilities = capabilities
+    device.capabilities_requested_at = None
+    if device.alert_level == "error" and device.alert_message == "no_capabilities_response":
+        device.alert_level = ""
+        device.alert_message = ""
+    device.save(update_fields=[
+        "hardware_id", "publish_interval", "capabilities",
+        "capabilities_requested_at", "alert_level", "alert_message",
+    ])
