@@ -33,6 +33,7 @@ class Device(models.Model):
     )
     alert_message = models.CharField(max_length=256, blank=True, default="")
     capabilities_requested_at = models.DateTimeField(null=True, blank=True)
+    guest_visible_metrics = models.JSONField(default=list, blank=True)
 
     class Meta:
         ordering = ["device_id"]

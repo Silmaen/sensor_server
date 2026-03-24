@@ -2,57 +2,105 @@
 {% load i18n device_tags %}
 {% block title %}{% trans "Dashboard" %}{% endblock %}
 
+{% block extra_head %}
+<style>
+    .dashboard-toolbar { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
+    .dashboard-toolbar .refresh-group { display: flex; align-items: center; gap: 0.3rem; margin-left: auto; }
+    .dashboard-toolbar .refresh-group select { margin: 0; padding: 0.25em 0.4em; font-size: 0.85em; width: auto; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div hx-ext="ws" ws-connect="/ws/live/">
-    <h2>{% trans "Dashboard" %}</h2>
+    <div class="dashboard-toolbar">
+        <h2 style="margin:0;">{% trans "Dashboard" %}</h2>
+        <div class="refresh-group">
+            <small>{% trans "Refresh:" %}</small>
+            <select id="refresh-select">
+                <option value="0">{% trans "Off" %}</option>
+                <option value="10">10s</option>
+                <option value="30">30s</option>
+                <option value="60" selected>1m</option>
+                <option value="300">5m</option>
+                <option value="900">15m</option>
+            </select>
+        </div>
+    </div>
 
     <div class="device-grid" id="device-grid">
-        {% for device in devices %}
-            {% include "devices/_device_card.html" with device=device %}
-        {% empty %}
-            <p>{% trans "No devices detected. Devices will appear automatically when they publish to MQTT." %}</p>
-        {% endfor %}
+        {% include "readings/_dashboard_cards.html" %}
     </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-var I18N = {
-    online: "{% filter escapejs %}{% trans 'online' %}{% endfilter %}",
-    offline: "{% filter escapejs %}{% trans 'offline' %}{% endfilter %}"
-};
-document.body.addEventListener("htmx:wsAfterMessage", function(evt) {
-    try {
-        const data = JSON.parse(evt.detail.message);
-        if (data.device_id && data.metric !== undefined) {
-            const el = document.getElementById("metric-" + data.device_id + "-" + data.metric);
-            if (el) {
-                el.textContent = data.value;
-            }
-            const ts = document.getElementById("lastseen-" + data.device_id);
-            if (ts) {
-                ts.textContent = new Date(data.time).toLocaleTimeString();
-            }
-            const badge = document.getElementById("status-" + data.device_id);
-            if (badge) {
-                badge.className = "badge badge-online";
-                badge.textContent = I18N.online;
-            }
-        }
-        if (data.device_id && data.alert_level !== undefined) {
-            const alertEl = document.getElementById("alert-" + data.device_id);
-            if (alertEl) {
-                if (data.alert_level) {
-                    alertEl.className = "badge " + (data.alert_level === "error" ? "badge-error" : "badge-warning");
-                    alertEl.textContent = data.alert_level + (data.alert_message ? ": " + data.alert_message : "");
-                    alertEl.style.display = "";
-                } else {
-                    alertEl.style.display = "none";
+(function() {
+    var I18N = {
+        online: "{% filter escapejs %}{% trans 'online' %}{% endfilter %}",
+        offline: "{% filter escapejs %}{% trans 'offline' %}{% endfilter %}"
+    };
+    var refreshTimer = null;
+
+    // WebSocket live updates
+    document.body.addEventListener("htmx:wsAfterMessage", function(evt) {
+        try {
+            var data = JSON.parse(evt.detail.message);
+            if (data.device_id && data.metric !== undefined) {
+                var el = document.getElementById("metric-" + data.device_id + "-" + data.metric);
+                if (!el) {
+                    var container = document.getElementById("metrics-" + data.device_id);
+                    var card = document.getElementById("card-" + data.device_id);
+                    if (container && card) {
+                        var visible = (card.dataset.visibleMetrics || "").split(",");
+                        if (visible.indexOf(data.metric) === -1 && visible[0] !== "") return;
+                        var row = document.createElement("div");
+                        row.className = "metric-row";
+                        row.innerHTML = "<strong>" + data.metric + ":</strong> <span id=\"metric-" + data.device_id + "-" + data.metric + "\"></span>";
+                        container.appendChild(row);
+                        el = row.querySelector("span");
+                    }
+                }
+                if (el) {
+                    el.textContent = data.value;
+                }
+                var ts = document.getElementById("lastseen-" + data.device_id);
+                if (ts) {
+                    ts.textContent = new Date(data.time).toLocaleTimeString();
+                }
+                var badge = document.getElementById("status-" + data.device_id);
+                if (badge) {
+                    badge.className = "badge badge-online";
+                    badge.textContent = I18N.online;
                 }
             }
+            if (data.device_id && data.alert_level !== undefined) {
+                var alertEl = document.getElementById("alert-" + data.device_id);
+                if (alertEl) {
+                    if (data.alert_level) {
+                        alertEl.className = "badge " + (data.alert_level === "error" ? "badge-error" : "badge-warning");
+                        alertEl.textContent = data.alert_level + (data.alert_message ? ": " + data.alert_message : "");
+                        alertEl.style.display = "";
+                    } else {
+                        alertEl.style.display = "none";
+                    }
+                }
+            }
+        } catch(e) {}
+    });
+
+    // Auto-refresh via HTMX
+    function setupRefresh() {
+        if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+        var seconds = parseInt(document.getElementById("refresh-select").value, 10);
+        if (seconds > 0) {
+            refreshTimer = setInterval(function() {
+                htmx.ajax("GET", "{% url 'readings:dashboard_cards' %}", {target: "#device-grid", swap: "innerHTML"});
+            }, seconds * 1000);
         }
-    } catch(e) {}
-});
+    }
+    document.getElementById("refresh-select").addEventListener("change", setupRefresh);
+    setupRefresh();
+})();
 </script>
 {% endblock %}

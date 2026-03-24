@@ -14,9 +14,21 @@
         {% trans "Location" %}
         <input type="text" name="location" value="{{ device.location }}">
     </label>
+    {% if metrics %}
+    <fieldset>
+        <legend>{% trans "Guest-visible metrics" %}</legend>
+        {% for m in metrics %}
+        <label>
+            <input type="checkbox" name="guest_visible_metrics" value="{{ m }}"
+                   {% if m in device.guest_visible_metrics %}checked{% endif %}>
+            {{ m }}
+        </label>
+        {% endfor %}
+    </fieldset>
+    {% endif %}
     <div class="grid">
         <button type="submit">{% trans "Save" %}</button>
-        <a href="{% url 'devices:detail' device.device_id %}" role="button" class="outline">{% trans "Cancel" %}</a>
+        <a href="{% url 'devices:admin' device.device_id %}" role="button" class="outline">{% trans "Cancel" %}</a>
     </div>
 </form>
 {% endblock %}

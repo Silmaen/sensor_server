@@ -16,7 +16,7 @@
     <tbody>
         {% for device in pending_devices %}
         <tr>
-            <td><a href="{% url 'devices:detail' device.device_id %}">{{ device.effective_name }}</a></td>
+            <td><a href="{% url 'devices:history' device.device_id %}">{{ device.effective_name }}</a></td>
             <td>{{ device.device_type }}</td>
             <td>{{ device.last_seen|date:"Y-m-d H:i"|default:"-" }}</td>
             {% if user|has_role:"admin" %}
@@ -52,7 +52,7 @@
     <tbody>
         {% for device in approved_devices %}
         <tr>
-            <td><a href="{% url 'devices:detail' device.device_id %}">{{ device.effective_name }}</a></td>
+            <td><a href="{% url 'devices:history' device.device_id %}">{{ device.effective_name }}</a></td>
             <td>{{ device.device_type }}</td>
             <td>{{ device.location|default:"-" }}</td>
             <td>

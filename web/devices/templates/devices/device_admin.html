@@ -1,10 +1,6 @@
 {% extends "base.html" %}
 {% load i18n device_tags %}
-{% block title %}{{ device.effective_name }}{% endblock %}
-
-{% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-{% endblock %}
+{% block title %}{% trans "Administration" %} — {{ device.effective_name }}{% endblock %}
 
 {% block content %}
 <hgroup>
@@ -19,9 +15,8 @@
         {% else %}
             <span class="badge badge-offline">{% trans "pending approval" %}</span>
         {% endif %}
-        {% if user|has_role:"admin" %}
-            <a href="{% url 'devices:edit' device.device_id %}" role="button" class="outline">{% trans "Edit" %}</a>
-        {% endif %}
+        <a href="{% url 'devices:edit' device.device_id %}" role="button" class="outline" style="margin-left:0.5rem;">{% trans "Edit" %}</a>
+        <a href="{% url 'devices:history' device.device_id %}" role="button" class="outline">{% trans "View history" %}</a>
     </p>
 </hgroup>
 
@@ -55,10 +50,16 @@
         {% endfor %}
     </p>
     {% endif %}
+    {% if device.guest_visible_metrics %}
+    <p><strong>{% trans "Guest-visible metrics:" %}</strong>
+        {% for m in device.guest_visible_metrics %}
+            <code>{{ m }}</code>{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+    </p>
+    {% endif %}
 </details>
 {% endif %}
 
-{% if user|has_role:"admin" %}
 <div class="grid">
     {% if not device.is_approved %}
     <form hx-post="{% url 'devices:approve' device.device_id %}" hx-swap="none">
@@ -78,30 +79,7 @@
         <button type="submit" class="outline">{% trans "Request capabilities" %}</button>
     </form>
 </div>
-{% endif %}
 
-<h3>{% trans "History" %}</h3>
-<div>
-    <label>
-        {% trans "Metric:" %}
-        <select id="metric-select">
-            <option value="temperature" selected>{% trans "Temperature" %}</option>
-            <option value="humidity">{% trans "Humidity" %}</option>
-        </select>
-    </label>
-    <label>
-        {% trans "Period:" %}
-        <select id="period-select">
-            <option value="6">6h</option>
-            <option value="24" selected>24h</option>
-            <option value="72">{% trans "3 days" %}</option>
-            <option value="168">{% trans "7 days" %}</option>
-        </select>
-    </label>
-</div>
-<div id="chart" style="width:100%; height:400px;"></div>
-
-{% if user|has_role:"resident" %}
 <h3>{% trans "Send command" %}</h3>
 <form hx-post="{% url 'devices:command' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML">
     {% csrf_token %}
@@ -110,50 +88,9 @@
         <button type="submit">{% trans "Send" %}</button>
     </div>
 </form>
-{% endif %}
 
 <h3>{% trans "Command history" %}</h3>
 <div id="command-log">
     {% include "devices/_command_log.html" %}
 </div>
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-(function() {
-    const deviceId = "{{ device.device_id|escapejs }}";
-    const chartDom = document.getElementById("chart");
-    const chart = echarts.init(chartDom);
-    const metricSelect = document.getElementById("metric-select");
-    const periodSelect = document.getElementById("period-select");
-
-    function loadChart() {
-        const metric = metricSelect.value;
-        const hours = periodSelect.value;
-        fetch(`/api/chart/${deviceId}/?metric=${metric}&hours=${hours}`)
-            .then(r => r.json())
-            .then(data => {
-                chart.setOption({
-                    tooltip: { trigger: "axis" },
-                    xAxis: {
-                        type: "time",
-                        data: data.times,
-                    },
-                    yAxis: { type: "value", name: data.metric },
-                    series: [{
-                        name: data.metric,
-                        type: "line",
-                        smooth: true,
-                        data: data.times.map((t, i) => [t, data.values[i]]),
-                    }],
-                }, true);
-            });
-    }
-
-    metricSelect.addEventListener("change", loadChart);
-    periodSelect.addEventListener("change", loadChart);
-    window.addEventListener("resize", () => chart.resize());
-    loadChart();
-})();
-</script>
 {% endblock %}

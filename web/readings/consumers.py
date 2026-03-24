@@ -28,23 +28,7 @@ class LiveReadingsConsumer(AsyncJsonWebsocketConsumer):
 
     async def sensor_reading(self, event):
         """Handle sensor_reading messages from the channel layer."""
-        user = self.scope.get("user")
-        if user is None:
-            return
-
-        role = "admin" if user.is_superuser else await self._get_role(user)
-
-        # Unapproved users should not be connected, but guard anyway
-        if role is None:
-            return
-
-        reading = event["reading"]
-
-        # Guests only see temperature and humidity
-        if role == "guest" and reading.get("metric") not in ("temperature", "humidity"):
-            return
-
-        await self.send_json(reading)
+        await self.send_json(event["reading"])
 
     async def device_status(self, event):
         """Handle device_status messages from the channel layer."""

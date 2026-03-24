@@ -310,3 +310,58 @@ msgstr "Impossible de modifier le compte super-administrateur."
 
 msgid "Protected"
 msgstr "Protégé"
+
+#: devices/templates (history & admin views)
+msgid "Administration"
+msgstr "Administration"
+
+msgid "View history"
+msgstr "Voir l'historique"
+
+msgid "Guest-visible metrics"
+msgstr "Mesures visibles par les invités"
+
+msgid "Guest-visible metrics:"
+msgstr "Mesures visibles par les invités :"
+
+msgid "No metrics available for this device."
+msgstr "Aucune mesure disponible pour cet appareil."
+
+msgid "Custom range"
+msgstr "Plage personnalisée"
+
+msgid "From:"
+msgstr "Du :"
+
+msgid "To:"
+msgstr "Au :"
+
+msgid "Apply"
+msgstr "Appliquer"
+
+msgid "1 hour"
+msgstr "1 heure"
+
+msgid "6 hours"
+msgstr "6 heures"
+
+msgid "1 day"
+msgstr "1 jour"
+
+msgid "1 month"
+msgstr "1 mois"
+
+msgid "2 months"
+msgstr "2 mois"
+
+msgid "3 months"
+msgstr "3 mois"
+
+msgid "1 year"
+msgstr "1 an"
+
+msgid "Refresh:"
+msgstr "Rafraîchissement :"
+
+msgid "Off"
+msgstr "Désactivé"

@@ -1,0 +1,6 @@
+{% load i18n device_tags %}
+{% for device in devices %}
+    {% include "devices/_device_card.html" with device=device %}
+{% empty %}
+    <p>{% trans "No devices detected. Devices will appear automatically when they publish to MQTT." %}</p>
+{% endfor %}
