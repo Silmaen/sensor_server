@@ -13,3 +13,11 @@ def has_role(user, role):
     if profile is None:
         return False
     return profile.has_role(role)
+
+
+@register.filter
+def get_item(dictionary, key):
+    """Lookup a dict key from a template variable."""
+    if isinstance(dictionary, dict):
+        return dictionary.get(key, "")
+    return ""

@@ -58,10 +58,13 @@ def device_history_view(request, device_id):
         hasattr(request.user, "profile") and request.user.profile.has_role("admin")
     )
 
+    units = device.capabilities.get("units", {}) if device.capabilities else {}
+
     return render(request, "devices/device_history.html", {
         "device": device,
         "metrics": metrics,
         "metrics_json": json.dumps(metrics),
+        "units_json": json.dumps(units),
         "is_admin": is_admin,
     })
 

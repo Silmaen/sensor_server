@@ -130,22 +130,44 @@ device receives them when it reconnects. `request_capabilities` uses `retain=Fal
 {
   "hardware_id": "ESP-ABCDEF123456",
   "publish_interval": 60,
-  "metrics": ["temperature", "humidity"],
-  "commands": ["set_interval"]
+  "metrics": ["temperature", "humidity", "pressure"],
+  "units": {
+    "temperature": "°C",
+    "humidity": "%",
+    "pressure": "hPa"
+  },
+  "commands": ["set_interval", "set_led"],
+  "command_params": {
+    "set_interval": [{"name": "value", "type": "number"}],
+    "set_led": [
+      {"name": "state", "type": "boolean"},
+      {"name": "brightness", "type": "number"}
+    ]
+  }
 }
 ```
 
-| Field              | Type     | Required | Description                                                   |
-|--------------------|----------|:--------:|---------------------------------------------------------------|
-| `hardware_id`      | string   |   Yes    | Unique hardware identifier (e.g. ESP chip ID). Max 256 chars. |
-| `publish_interval` | number   |   Yes    | Sensor publish frequency in seconds (1-86400).                |
-| `metrics`          | string[] |   Yes    | List of metric names the device reports.                      |
-| `commands`         | string[] |   Yes    | List of accepted command actions.                             |
+| Field              | Type     | Required | Description                                                                    |
+|--------------------|----------|:--------:|--------------------------------------------------------------------------------|
+| `hardware_id`      | string   |   Yes    | Unique hardware identifier (e.g. ESP chip ID). Max 256 chars.                  |
+| `publish_interval` | number   |   Yes    | Sensor publish frequency in seconds (1-86400).                                 |
+| `metrics`          | string[] |   Yes    | List of metric names the device reports.                                       |
+| `units`            | object   |    No    | Mapping of metric name to unit string (e.g. `"°C"`, `"%"`). Max 16 chars/unit. |
+| `commands`         | string[] |   Yes    | List of accepted command actions.                                              |
+| `command_params`   | object   |    No    | Mapping of command name to array of parameter definitions (see below).         |
+
+**Parameter definition format:**
+
+Each entry in a `command_params` array is an object with:
+- `name` (string, required): The parameter name.
+- `type` (string, required): One of `"number"`, `"string"`, `"boolean"`.
 
 **Notes:**
 - `commands` should **not** include `request_capabilities` itself — this command
   is always implicitly supported by all devices.
 - Metric and command names follow the same identifier rules (alphanumeric, `-`, `_`).
+- `units` and `command_params` are optional. If omitted, the server displays metrics
+  without units and provides a raw JSON command input.
 
 ## Capabilities request flow
 
@@ -261,17 +283,19 @@ verified at the application level through the capabilities/approval workflow.
 
 ## Payload validation summary
 
-| Check                | Applies to     | Rule                                         | On failure      |
-|----------------------|----------------|----------------------------------------------|-----------------|
-| Payload size         | All            | Max 10 KB                                    | Message dropped |
-| JSON validity        | All            | Must be valid JSON object                    | Message dropped |
-| Topic identifiers    | All            | `^[a-zA-Z0-9_\-]+$`, max 128 chars           | Message dropped |
-| Metric names         | `sensors`      | `^[a-zA-Z0-9_\-]+$`, max 64 chars            | Metric skipped  |
-| Metric values        | `sensors`      | Must parse as float                          | Metric skipped  |
-| Alert level          | `status`       | Must be `""`, `"ok"`, `"warning"`, `"error"` | Message dropped |
-| Hardware ID          | `capabilities` | String, max 256 chars                        | Field ignored   |
-| Publish interval     | `capabilities` | Number, 1-86400                              | Field ignored   |
-| Command/metric names | `capabilities` | `^[a-zA-Z0-9_\-]+$`                          | Entry skipped   |
+| Check                | Applies to     | Rule                                           | On failure      |
+|----------------------|----------------|------------------------------------------------|-----------------|
+| Payload size         | All            | Max 10 KB                                      | Message dropped |
+| JSON validity        | All            | Must be valid JSON object                      | Message dropped |
+| Topic identifiers    | All            | `^[a-zA-Z0-9_\-]+$`, max 128 chars             | Message dropped |
+| Metric names         | `sensors`      | `^[a-zA-Z0-9_\-]+$`, max 64 chars              | Metric skipped  |
+| Metric values        | `sensors`      | Must parse as float                            | Metric skipped  |
+| Alert level          | `status`       | Must be `""`, `"ok"`, `"warning"`, `"error"`   | Message dropped |
+| Hardware ID          | `capabilities` | String, max 256 chars                          | Field ignored   |
+| Publish interval     | `capabilities` | Number, 1-86400                                | Field ignored   |
+| Command/metric names | `capabilities` | `^[a-zA-Z0-9_\-]+$`                            | Entry skipped   |
+| Unit strings         | `capabilities` | String, max 16 chars                           | Field ignored   |
+| Param type           | `capabilities` | Must be `"number"`, `"string"`, or `"boolean"` | Entry skipped   |
 
 ## Example session
 
@@ -287,7 +311,11 @@ thermo/living01/capabilities <- {
     "hardware_id": "ESP-A1B2C3D4E5F6",
     "publish_interval": 60,
     "metrics": ["temperature", "humidity"],
-    "commands": ["set_interval"]
+    "units": {"temperature": "°C", "humidity": "%"},
+    "commands": ["set_interval"],
+    "command_params": {
+        "set_interval": [{"name": "value", "type": "number"}]
+    }
 }
 
 # 4. Admin approves the device from the web UI
@@ -307,7 +335,11 @@ thermo/living01/capabilities <- {
     "hardware_id": "ESP-A1B2C3D4E5F6",
     "publish_interval": 120,
     "metrics": ["temperature", "humidity"],
-    "commands": ["set_interval"]
+    "units": {"temperature": "°C", "humidity": "%"},
+    "commands": ["set_interval"],
+    "command_params": {
+        "set_interval": [{"name": "value", "type": "number"}]
+    }
 }
 
 # 9. No data for 360 seconds (3 x 120s) -> server considers device offline

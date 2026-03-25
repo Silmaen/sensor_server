@@ -1,3 +1,5 @@
+import json
+from collections import defaultdict
 from datetime import timedelta
 
 from django.db import connection
@@ -7,7 +9,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from accounts.decorators import role_required
-from devices.models import Device
+from devices.models import Device, DeviceStatusLog
 
 from .models import SensorReading
 
@@ -31,6 +33,51 @@ def _is_guest_only(request):
     if profile and profile.has_role("resident"):
         return False
     return True
+
+
+def _parse_time_range(request):
+    """Parse preset or start/end from request GET params. Returns (start, end)."""
+    preset = request.GET.get("preset")
+    if preset and preset in PRESETS:
+        end = timezone.now()
+        start = end - PRESETS[preset]
+        return start, end
+    start = parse_datetime(request.GET.get("start", ""))
+    end = parse_datetime(request.GET.get("end", ""))
+    if not start or not end:
+        end = timezone.now()
+        start = end - timedelta(hours=24)
+    return start, end
+
+
+def _fetch_readings(device_id, metric, start, end):
+    """Fetch readings for a single device/metric, auto-selecting data source by span."""
+    span_seconds = (end - start).total_seconds()
+
+    if span_seconds <= 48 * 3600:
+        readings = (
+            SensorReading.objects.filter(
+                device_id=device_id, metric=metric,
+                time__gte=start, time__lte=end,
+            )
+            .order_by("time")
+            .values_list("time", "value")
+        )
+        return [r[0].isoformat() for r in readings], [r[1] for r in readings]
+
+    table = "readings_hourly" if span_seconds <= 90 * 86400 else "readings_daily"
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            SELECT bucket, avg_value FROM {table}
+            WHERE device_id = %s AND metric = %s
+              AND bucket >= %s AND bucket <= %s
+            ORDER BY bucket
+            """,
+            [device_id, metric, start, end],
+        )
+        rows = cursor.fetchall()
+    return [r[0].isoformat() for r in rows], [round(r[1], 2) for r in rows]
 
 
 def _annotate_devices_with_metrics(devices, guest_only):
@@ -61,9 +108,12 @@ def _annotate_devices_with_metrics(devices, guest_only):
             }
         else:
             device.latest_metrics = all_metrics
-        # CSV for JS filtering of WebSocket-pushed metrics
         device.visible_metrics_csv = ",".join(device.latest_metrics.keys())
 
+
+# ---------------------------------------------------------------------------
+# Dashboard
+# ---------------------------------------------------------------------------
 
 @role_required("guest")
 def dashboard_view(request):
@@ -80,78 +130,211 @@ def dashboard_cards_view(request):
     return render(request, "readings/_dashboard_cards.html", {"devices": devices})
 
 
+# ---------------------------------------------------------------------------
+# Chart data API (single device, single metric)
+# ---------------------------------------------------------------------------
+
 @role_required("guest")
 def chart_data_view(request, device_id):
     device = get_object_or_404(Device, device_id=device_id, is_approved=True)
     metric = request.GET.get("metric", "temperature")
 
-    # Guest visibility check
     if _is_guest_only(request):
         if metric not in (device.guest_visible_metrics or []):
             return JsonResponse({"error": "forbidden"}, status=403)
 
-    # Determine time range
-    preset = request.GET.get("preset")
-    if preset and preset in PRESETS:
-        end = timezone.now()
-        start = end - PRESETS[preset]
-    else:
-        start = parse_datetime(request.GET.get("start", ""))
-        end = parse_datetime(request.GET.get("end", ""))
-        if not start or not end:
-            end = timezone.now()
-            start = end - timedelta(hours=24)
-
-    span_seconds = (end - start).total_seconds()
-
-    if span_seconds <= 48 * 3600:
-        # Raw data
-        readings = (
-            SensorReading.objects.filter(
-                device_id=device_id, metric=metric,
-                time__gte=start, time__lte=end,
-            )
-            .order_by("time")
-            .values_list("time", "value")
-        )
-        times = [r[0].isoformat() for r in readings]
-        values = [r[1] for r in readings]
-    elif span_seconds <= 90 * 86400:
-        # Hourly aggregate
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT bucket, avg_value
-                FROM readings_hourly
-                WHERE device_id = %s AND metric = %s
-                  AND bucket >= %s AND bucket <= %s
-                ORDER BY bucket
-                """,
-                [device_id, metric, start, end],
-            )
-            rows = cursor.fetchall()
-        times = [r[0].isoformat() for r in rows]
-        values = [round(r[1], 2) for r in rows]
-    else:
-        # Daily aggregate
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT bucket, avg_value
-                FROM readings_daily
-                WHERE device_id = %s AND metric = %s
-                  AND bucket >= %s AND bucket <= %s
-                ORDER BY bucket
-                """,
-                [device_id, metric, start, end],
-            )
-            rows = cursor.fetchall()
-        times = [r[0].isoformat() for r in rows]
-        values = [round(r[1], 2) for r in rows]
+    start, end = _parse_time_range(request)
+    times, values = _fetch_readings(device_id, metric, start, end)
+    unit = (device.capabilities or {}).get("units", {}).get(metric, "")
 
     return JsonResponse({
         "times": times,
         "values": values,
         "metric": metric,
         "device_id": device_id,
+        "unit": unit,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Status timeline API
+# ---------------------------------------------------------------------------
+
+@role_required("guest")
+def status_timeline_view(request, device_id):
+    device = get_object_or_404(Device, device_id=device_id, is_approved=True)
+    start, end = _parse_time_range(request)
+
+    # Get the initial state: last log entry before the window
+    initial = (
+        DeviceStatusLog.objects
+        .filter(device=device, time__lt=start)
+        .order_by("-time")
+        .values_list("alert_level", "alert_message")
+        .first()
+    )
+    initial_level = initial[0] if initial else ""
+    initial_message = initial[1] if initial else ""
+
+    # Get all log entries within the window
+    logs = list(
+        DeviceStatusLog.objects
+        .filter(device=device, time__gte=start, time__lte=end)
+        .order_by("time")
+        .values_list("time", "alert_level", "alert_message")
+    )
+
+    segments = []
+    current_start = start.isoformat()
+    current_level = initial_level
+    current_message = initial_message
+
+    for log_time, level, message in logs:
+        segments.append({
+            "start": current_start,
+            "end": log_time.isoformat(),
+            "level": current_level or "ok",
+            "message": current_message,
+        })
+        current_start = log_time.isoformat()
+        current_level = level
+        current_message = message
+
+    # Final segment to end of window
+    segments.append({
+        "start": current_start,
+        "end": end.isoformat(),
+        "level": current_level or "ok",
+        "message": current_message,
+    })
+
+    return JsonResponse({"segments": segments})
+
+
+# ---------------------------------------------------------------------------
+# Overview page (all sensors by metric type)
+# ---------------------------------------------------------------------------
+
+@role_required("guest")
+def overview_view(request):
+    devices = Device.objects.filter(is_approved=True)
+    guest_only = _is_guest_only(request)
+
+    # Gather all distinct metrics across devices
+    device_ids = list(devices.values_list("device_id", flat=True))
+    all_metrics_qs = (
+        SensorReading.objects
+        .filter(device_id__in=device_ids)
+        .values_list("metric", flat=True)
+        .distinct()
+        .order_by("metric")
+    )
+
+    # Build metric -> device list mapping
+    metrics_devices = defaultdict(list)
+    device_names = {}
+    units = {}
+
+    for device in devices:
+        device_names[device.device_id] = device.effective_name
+        caps = device.capabilities or {}
+        for k, v in caps.get("units", {}).items():
+            if k not in units:
+                units[k] = v
+
+    # For each metric, find which devices report it
+    device_metrics = {}
+    if device_ids:
+        qs = SensorReading.objects.raw(
+            """
+            SELECT DISTINCT ON (device_id, metric)
+                time, device_id, metric, value
+            FROM readings_sensorreading
+            WHERE device_id = ANY(%s)
+            ORDER BY device_id, metric, time DESC
+            """,
+            [device_ids],
+        )
+        for r in qs:
+            device_metrics.setdefault(r.device_id, set()).add(r.metric)
+
+    for metric in all_metrics_qs:
+        for device in devices:
+            dm = device_metrics.get(device.device_id, set())
+            if metric not in dm:
+                continue
+            if guest_only:
+                visible = device.guest_visible_metrics or []
+                if metric not in visible:
+                    continue
+            metrics_devices[metric].append(device.device_id)
+
+    return render(request, "readings/overview.html", {
+        "metrics_devices_json": json.dumps(dict(metrics_devices)),
+        "device_names_json": json.dumps(device_names),
+        "units_json": json.dumps(units),
+        "metrics": sorted(metrics_devices.keys()),
+        "devices": devices,
+    })
+
+
+@role_required("guest")
+def overview_chart_data_view(request):
+    """Return chart data for one metric across multiple devices."""
+    metric = request.GET.get("metric", "")
+    device_ids = [d for d in request.GET.get("devices", "").split(",") if d]
+    if not metric or not device_ids:
+        return JsonResponse({"series": {}, "metric": metric, "unit": ""})
+
+    start, end = _parse_time_range(request)
+    span_seconds = (end - start).total_seconds()
+
+    # Determine source
+    if span_seconds <= 48 * 3600:
+        readings = (
+            SensorReading.objects.filter(
+                device_id__in=device_ids, metric=metric,
+                time__gte=start, time__lte=end,
+            )
+            .order_by("device_id", "time")
+            .values_list("device_id", "time", "value")
+        )
+        series = defaultdict(lambda: {"times": [], "values": []})
+        for did, t, v in readings:
+            series[did]["times"].append(t.isoformat())
+            series[did]["values"].append(v)
+    else:
+        table = "readings_hourly" if span_seconds <= 90 * 86400 else "readings_daily"
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT device_id, bucket, avg_value FROM {table}
+                WHERE device_id = ANY(%s) AND metric = %s
+                  AND bucket >= %s AND bucket <= %s
+                ORDER BY device_id, bucket
+                """,
+                [device_ids, metric, start, end],
+            )
+            rows = cursor.fetchall()
+        series = defaultdict(lambda: {"times": [], "values": []})
+        for did, t, v in rows:
+            series[did]["times"].append(t.isoformat())
+            series[did]["values"].append(round(v, 2))
+
+    # Get unit from first device that has it
+    unit = ""
+    for did in device_ids:
+        try:
+            d = Device.objects.get(device_id=did)
+            u = (d.capabilities or {}).get("units", {}).get(metric, "")
+            if u:
+                unit = u
+                break
+        except Device.DoesNotExist:
+            continue
+
+    return JsonResponse({
+        "metric": metric,
+        "unit": unit,
+        "series": dict(series),
     })

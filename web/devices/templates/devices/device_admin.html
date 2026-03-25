@@ -39,7 +39,7 @@
     {% if device.capabilities.metrics %}
     <p><strong>{% trans "Metrics:" %}</strong>
         {% for m in device.capabilities.metrics %}
-            <code>{{ m }}</code>{% if not forloop.last %}, {% endif %}
+            <code>{{ m }}</code>{% if device.capabilities.units %}<small>{% with unit=device.capabilities.units|get_item:m %}{% if unit %} ({{ unit }}){% endif %}{% endwith %}</small>{% endif %}{% if not forloop.last %}, {% endif %}
         {% endfor %}
     </p>
     {% endif %}
@@ -49,6 +49,18 @@
             <code>{{ c }}</code>{% if not forloop.last %}, {% endif %}
         {% endfor %}
     </p>
+    {% endif %}
+    {% if device.capabilities.command_params %}
+    <details>
+        <summary>{% trans "Command parameters" %}</summary>
+        {% for cmd, params in device.capabilities.command_params.items %}
+        <p><code>{{ cmd }}</code>:
+            {% for p in params %}
+                <strong>{{ p.name }}</strong> (<em>{{ p.type }}</em>){% if not forloop.last %}, {% endif %}
+            {% endfor %}
+        </p>
+        {% endfor %}
+    </details>
     {% endif %}
     {% if device.guest_visible_metrics %}
     <p><strong>{% trans "Guest-visible metrics:" %}</strong>
@@ -81,16 +93,88 @@
 </div>
 
 <h3>{% trans "Send command" %}</h3>
-<form hx-post="{% url 'devices:command' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML">
+{% if device.capabilities.commands and device.capabilities.command_params %}
+<form id="smart-command-form" hx-post="{% url 'devices:command' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML">
     {% csrf_token %}
-    <div class="grid">
-        <input type="text" name="command" placeholder='{"action": "set_interval", "value": 30}' required>
-        <button type="submit">{% trans "Send" %}</button>
+    <input type="hidden" name="command" id="smart-command-payload">
+    <label>{% trans "Action:" %}
+        <select id="cmd-action-select">
+            {% for c in device.capabilities.commands %}
+            <option value="{{ c }}">{{ c }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    {% for cmd, params in device.capabilities.command_params.items %}
+    <div class="cmd-params" data-cmd="{{ cmd }}" style="display:none;">
+        {% for p in params %}
+        <label>{{ p.name }}
+            {% if p.type == "boolean" %}
+            <select name="param-{{ cmd }}-{{ p.name }}" data-param="{{ p.name }}" data-type="boolean">
+                <option value="true">true</option>
+                <option value="false">false</option>
+            </select>
+            {% elif p.type == "number" %}
+            <input type="number" step="any" name="param-{{ cmd }}-{{ p.name }}" data-param="{{ p.name }}" data-type="number">
+            {% else %}
+            <input type="text" name="param-{{ cmd }}-{{ p.name }}" data-param="{{ p.name }}" data-type="string">
+            {% endif %}
+        </label>
+        {% endfor %}
     </div>
+    {% endfor %}
+    <button type="submit">{% trans "Send" %}</button>
 </form>
+<details>
+    <summary>{% trans "Raw JSON command" %}</summary>
+{% endif %}
+    <form hx-post="{% url 'devices:command' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML">
+        {% csrf_token %}
+        <div class="grid">
+            <input type="text" name="command" placeholder='{"action": "set_interval", "value": 30}' required>
+            <button type="submit">{% trans "Send" %}</button>
+        </div>
+    </form>
+{% if device.capabilities.commands and device.capabilities.command_params %}
+</details>
+{% endif %}
 
 <h3>{% trans "Command history" %}</h3>
 <div id="command-log">
     {% include "devices/_command_log.html" %}
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if device.capabilities.commands and device.capabilities.command_params %}
+<script>
+(function() {
+    var actionSelect = document.getElementById("cmd-action-select");
+    var form = document.getElementById("smart-command-form");
+    var payloadField = document.getElementById("smart-command-payload");
+
+    function showParams() {
+        document.querySelectorAll(".cmd-params").forEach(function(el) {
+            el.style.display = el.dataset.cmd === actionSelect.value ? "" : "none";
+        });
+    }
+    actionSelect.addEventListener("change", showParams);
+    showParams();
+
+    form.addEventListener("submit", function(e) {
+        var action = actionSelect.value;
+        var cmd = {action: action};
+        var paramsDiv = document.querySelector('.cmd-params[data-cmd="' + action + '"]');
+        if (paramsDiv) {
+            paramsDiv.querySelectorAll("[data-param]").forEach(function(input) {
+                var val = input.value;
+                if (input.dataset.type === "number") val = parseFloat(val) || 0;
+                else if (input.dataset.type === "boolean") val = val === "true";
+                cmd[input.dataset.param] = val;
+            });
+        }
+        payloadField.value = JSON.stringify(cmd);
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}

@@ -41,8 +41,13 @@
         .badge-resident { background: #e67e22; color: #fff; }
         .badge-admin { background: #d35400; color: #fff; }
         .device-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
-        .device-card { border: 1px solid var(--pico-muted-border-color); border-radius: 8px; padding: 1rem; }
+        .device-card { border: 1px solid var(--pico-muted-border-color); border-radius: 8px; padding: 1rem; background: var(--pico-card-background-color); }
         .device-card h4 { margin-bottom: 0.3rem; }
+        details, fieldset, .section-box { border: 1px solid var(--pico-muted-border-color); border-radius: 8px; padding: 1rem; background: var(--pico-card-background-color); margin-bottom: 1rem; }
+        details[open] > summary { border-bottom: 1px solid var(--pico-muted-border-color); margin-bottom: 0.75rem; padding-bottom: 0.5rem; }
+        details > summary { cursor: pointer; font-weight: 600; }
+        fieldset { padding-top: 0.5rem; }
+        fieldset legend { font-weight: 600; }
         nav ul li.active > a { font-weight: bold; text-decoration: underline; }
         .lang-select { position: relative; display: inline-block; margin: 0; }
         .lang-select select { appearance: none; background: none; border: none; color: inherit; cursor: pointer; font-size: 0.9em; padding: 0.2em 1.4em 0.2em 0.2em; }
@@ -58,6 +63,7 @@
         <ul>
             {% if user.is_authenticated and is_approved %}
                 <li><a href="{% url 'readings:dashboard' %}">{% trans "Dashboard" %}</a></li>
+                <li><a href="{% url 'readings:overview' %}">{% trans "Overview" %}</a></li>
                 <li><a href="{% url 'devices:list' %}">{% trans "Devices" %}</a></li>
                 {% if user_role == "admin" or user.is_superuser %}
                     <li><a href="{% url 'accounts:user_list' %}">{% trans "Users" %}</a></li>

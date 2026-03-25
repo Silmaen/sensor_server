@@ -57,6 +57,24 @@ class Device(models.Model):
         return (timezone.now() - self.last_seen).total_seconds() < timeout
 
 
+class DeviceStatusLog(models.Model):
+    time = models.DateTimeField()
+    device = models.ForeignKey(
+        Device, on_delete=models.CASCADE, related_name="status_logs"
+    )
+    alert_level = models.CharField(
+        max_length=16, blank=True, default="", choices=ALERT_LEVEL_CHOICES
+    )
+    alert_message = models.CharField(max_length=256, blank=True, default="")
+
+    class Meta:
+        ordering = ["-time"]
+        indexes = [models.Index(fields=["device", "time"])]
+
+    def __str__(self):
+        return f"{self.device_id} {self.alert_level or 'ok'} @ {self.time:%Y-%m-%d %H:%M}"
+
+
 class CommandLog(models.Model):
     device = models.ForeignKey(
         Device, on_delete=models.CASCADE, related_name="commands"

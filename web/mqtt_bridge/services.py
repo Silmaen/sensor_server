@@ -8,7 +8,7 @@ from asgiref.sync import async_to_sync
 from django.conf import settings
 from django.utils import timezone as dj_timezone
 
-from devices.models import CAPABILITIES_RESPONSE_TIMEOUT, Device
+from devices.models import CAPABILITIES_RESPONSE_TIMEOUT, Device, DeviceStatusLog
 from readings.models import SensorReading
 
 logger = logging.getLogger(__name__)
@@ -98,6 +98,10 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
             device.alert_message = "no_capabilities_response"
             device.capabilities_requested_at = None
             device.save(update_fields=["alert_level", "alert_message", "capabilities_requested_at"])
+            DeviceStatusLog.objects.create(
+                time=now, device=device,
+                alert_level="error", alert_message="no_capabilities_response",
+            )
             logger.warning("Capabilities response timeout for %s", device_id)
 
     if not device.is_approved:
@@ -180,6 +184,11 @@ def handle_status_message(device_type: str, device_id: str, payload: bytes):
     device.last_seen = dj_timezone.now()
     device.save(update_fields=["alert_level", "alert_message", "last_seen"])
 
+    DeviceStatusLog.objects.create(
+        time=device.last_seen, device=device,
+        alert_level=device.alert_level, alert_message=device.alert_message,
+    )
+
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
         "live_readings",
@@ -236,11 +245,38 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
             c for c in data["commands"]
             if isinstance(c, str) and SAFE_IDENTIFIER_RE.match(c)
         ]
+    if isinstance(data.get("units"), dict):
+        capabilities["units"] = {
+            k: v for k, v in data["units"].items()
+            if isinstance(k, str) and SAFE_IDENTIFIER_RE.match(k)
+            and isinstance(v, str) and len(v) <= 16
+        }
+    valid_param_types = {"number", "string", "boolean"}
+    if isinstance(data.get("command_params"), dict):
+        command_params = {}
+        for cmd_name, params in data["command_params"].items():
+            if not isinstance(cmd_name, str) or not SAFE_IDENTIFIER_RE.match(cmd_name):
+                continue
+            if not isinstance(params, list):
+                continue
+            valid_params = []
+            for p in params:
+                if (isinstance(p, dict)
+                        and isinstance(p.get("name"), str)
+                        and isinstance(p.get("type"), str)
+                        and p["type"] in valid_param_types):
+                    valid_params.append({"name": p["name"], "type": p["type"]})
+            command_params[cmd_name] = valid_params
+        capabilities["command_params"] = command_params
     device.capabilities = capabilities
     device.capabilities_requested_at = None
     if device.alert_level == "error" and device.alert_message == "no_capabilities_response":
         device.alert_level = ""
         device.alert_message = ""
+        DeviceStatusLog.objects.create(
+            time=dj_timezone.now(), device=device,
+            alert_level="", alert_message="",
+        )
     device.save(update_fields=[
         "hardware_id", "publish_interval", "capabilities",
         "capabilities_requested_at", "alert_level", "alert_message",

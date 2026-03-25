@@ -365,3 +365,29 @@ msgstr "Rafraîchissement :"
 
 msgid "Off"
 msgstr "Désactivé"
+
+#: devices/templates (status timeline & overview)
+msgid "Device status"
+msgstr "Statut de l'appareil"
+
+msgid "Overview"
+msgstr "Vue d'ensemble"
+
+msgid "No metrics available."
+msgstr "Aucune mesure disponible."
+
+msgid "Select all"
+msgstr "Tout sélectionner"
+
+msgid "Deselect all"
+msgstr "Tout désélectionner"
+
+#: devices/templates (enhanced capabilities)
+msgid "Command parameters"
+msgstr "Paramètres de commande"
+
+msgid "Action:"
+msgstr "Action :"
+
+msgid "Raw JSON command"
+msgstr "Commande JSON brute"

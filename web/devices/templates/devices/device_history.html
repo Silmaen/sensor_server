@@ -77,6 +77,11 @@
     </div>
 </details>
 
+<div class="chart-container">
+    <h4>{% trans "Device status" %}</h4>
+    <div id="chart-status-timeline" style="width:100%; height:80px;"></div>
+</div>
+
 {% for m in metrics %}
 <div class="chart-container">
     <h4>{{ m }}</h4>
@@ -92,11 +97,20 @@
 (function() {
     var deviceId = "{{ device.device_id|escapejs }}";
     var metrics = {{ metrics_json|safe }};
+    var units = {{ units_json|safe }};
+    var CHART_COLORS = [
+        "#5470c6", "#91cc75", "#fac858", "#ee6666",
+        "#73c0de", "#3ba272", "#fc8452", "#9a60b4",
+        "#ea7ccc", "#48b8d0", "#ff9f7f", "#87cefa"
+    ];
     var charts = {};
     var currentPreset = "1d";
     var customStart = null;
     var customEnd = null;
     var refreshTimer = null;
+
+    var STATUS_COLORS = {"ok": "#2ecc40", "warning": "#e67e22", "error": "#e74c3c"};
+    var statusChart = echarts.init(document.getElementById("chart-status-timeline"));
 
     // Initialize charts
     metrics.forEach(function(metric) {
@@ -106,6 +120,48 @@
         }
     });
 
+    function loadStatusTimeline(params) {
+        fetch("/api/status-timeline/" + encodeURIComponent(deviceId) + "/?" + params)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var pieces = [];
+                var renderData = [];
+                data.segments.forEach(function(seg, i) {
+                    var color = STATUS_COLORS[seg.level] || STATUS_COLORS["ok"];
+                    renderData.push([new Date(seg.start).getTime(), new Date(seg.end).getTime(), seg.level, seg.message || "", color]);
+                });
+                statusChart.setOption({
+                    tooltip: {
+                        trigger: "item",
+                        formatter: function(p) {
+                            var d = p.data;
+                            var s = new Date(d[0]).toLocaleString();
+                            var e = new Date(d[1]).toLocaleString();
+                            return d[2].toUpperCase() + (d[3] ? ": " + d[3] : "") + "<br>" + s + " → " + e;
+                        }
+                    },
+                    xAxis: { type: "time", show: true, axisLabel: { show: false } },
+                    yAxis: { show: false, max: 1 },
+                    series: [{
+                        type: "custom",
+                        renderItem: function(params, api) {
+                            var start = api.coord([api.value(0), 0]);
+                            var end = api.coord([api.value(1), 0]);
+                            var height = api.size([0, 1])[1];
+                            return {
+                                type: "rect",
+                                shape: { x: start[0], y: start[1] - height, width: end[0] - start[0], height: height },
+                                style: { fill: api.value(4) }
+                            };
+                        },
+                        encode: { x: [0, 1] },
+                        data: renderData,
+                    }],
+                    grid: { top: 5, bottom: 20, left: 50, right: 20 },
+                }, true);
+            });
+    }
+
     function loadAllCharts() {
         var params;
         if (customStart && customEnd) {
@@ -114,20 +170,28 @@
             params = "preset=" + currentPreset;
         }
 
-        metrics.forEach(function(metric) {
+        loadStatusTimeline(params);
+
+        metrics.forEach(function(metric, idx) {
+            var color = CHART_COLORS[idx % CHART_COLORS.length];
             fetch("/api/chart/" + encodeURIComponent(deviceId) + "/?metric=" + encodeURIComponent(metric) + "&" + params)
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (!charts[metric]) return;
+                    var yName = metric;
+                    var unit = data.unit || units[metric] || "";
+                    if (unit) yName += " (" + unit + ")";
                     charts[metric].setOption({
                         tooltip: { trigger: "axis" },
                         xAxis: { type: "time" },
-                        yAxis: { type: "value", name: metric },
+                        yAxis: { type: "value", name: yName },
                         series: [{
                             name: metric,
                             type: "line",
                             smooth: true,
                             showSymbol: false,
+                            color: color,
+                            areaStyle: { opacity: 0.15 },
                             data: data.times.map(function(t, i) { return [t, data.values[i]]; }),
                         }],
                     }, true);
@@ -174,6 +238,7 @@
 
     // Resize
     window.addEventListener("resize", function() {
+        statusChart.resize();
         Object.keys(charts).forEach(function(k) { charts[k].resize(); });
     });
 
