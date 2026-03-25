@@ -391,3 +391,22 @@ msgstr "Action :"
 
 msgid "Raw JSON command"
 msgstr "Commande JSON brute"
+
+#: devices/templates (command form)
+msgid "Parameters:"
+msgstr "Paramètres :"
+
+msgid "value1, value2, ..."
+msgstr "valeur1, valeur2, ..."
+
+msgid "Expected:"
+msgstr "Attendu :"
+
+msgid "Metric"
+msgstr "Métrique"
+
+msgid "Unit"
+msgstr "Unité"
+
+msgid "Parameters"
+msgstr "Paramètres"

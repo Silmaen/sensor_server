@@ -8,12 +8,13 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from mqtt_bridge.services import (
+    handle_ack_message,
     handle_capabilities_message,
     handle_sensor_message,
     handle_status_message,
     parse_topic,
 )
-from mqtt_bridge.topics import TOPIC_CAPABILITIES, TOPIC_SENSORS, TOPIC_STATUS
+from mqtt_bridge.topics import TOPIC_ACK, TOPIC_CAPABILITIES, TOPIC_SENSORS, TOPIC_STATUS
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,7 @@ class Command(BaseCommand):
                 (TOPIC_SENSORS, 1),
                 (TOPIC_STATUS, 1),
                 (TOPIC_CAPABILITIES, 1),
+                (TOPIC_ACK, 1),
             ])
         else:
             logger.error("MQTT connect failed: %s", reason_code)
@@ -74,5 +76,7 @@ class Command(BaseCommand):
                 handle_status_message(device_type, device_id, msg.payload)
             elif msg_type == "capabilities":
                 handle_capabilities_message(device_type, device_id, msg.payload)
+            elif msg_type == "ack":
+                handle_ack_message(device_type, device_id, msg.payload)
         except Exception:
             logger.exception("Error processing %s", msg.topic)
