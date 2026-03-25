@@ -410,3 +410,13 @@ msgstr "Unité"
 
 msgid "Parameters"
 msgstr "Paramètres"
+
+#: devices/templates (command log management)
+msgid "Delete this command?"
+msgstr "Supprimer cette commande ?"
+
+msgid "Delete all command history?"
+msgstr "Supprimer tout l'historique des commandes ?"
+
+msgid "Clear all"
+msgstr "Tout effacer"

@@ -5,6 +5,7 @@ import paho.mqtt.publish as mqtt_publish
 from django.conf import settings
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from accounts.decorators import role_required
@@ -143,8 +144,35 @@ def device_command_view(request, device_id):
 
     if request.headers.get("HX-Request"):
         commands = device.commands.select_related("sent_by")[:20]
-        return render(request, "devices/_command_log.html", {"commands": commands})
+        return render(request, "devices/_command_log.html", {"commands": commands, "device": device})
 
+    return redirect("devices:admin", device_id=device.device_id)
+
+
+@role_required("admin")
+def device_delete_command_view(request, device_id, command_id):
+    device = get_object_or_404(Device, device_id=device_id)
+    if request.method != "POST":
+        return HttpResponseBadRequest()
+    CommandLog.objects.filter(id=command_id, device=device).delete()
+    if request.headers.get("HX-Request"):
+        commands = device.commands.select_related("sent_by")[:20]
+        return render(request, "devices/_command_log.html", {
+            "commands": commands, "device": device,
+        })
+    return redirect("devices:admin", device_id=device.device_id)
+
+
+@role_required("admin")
+def device_clear_commands_view(request, device_id):
+    device = get_object_or_404(Device, device_id=device_id)
+    if request.method != "POST":
+        return HttpResponseBadRequest()
+    device.commands.all().delete()
+    if request.headers.get("HX-Request"):
+        return render(request, "devices/_command_log.html", {
+            "commands": [], "device": device,
+        })
     return redirect("devices:admin", device_id=device.device_id)
 
 
@@ -185,10 +213,12 @@ def device_request_capabilities_view(request, device_id):
         device=device,
         command={"action": "request_capabilities"},
         sent_by=request.user,
+        acked=True,
+        acked_at=timezone.now(),
     )
 
     if request.headers.get("HX-Request"):
         commands = device.commands.select_related("sent_by")[:20]
-        return render(request, "devices/_command_log.html", {"commands": commands})
+        return render(request, "devices/_command_log.html", {"commands": commands, "device": device})
 
     return redirect("devices:admin", device_id=device.device_id)

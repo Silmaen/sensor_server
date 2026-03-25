@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n device_tags %}
 {% if commands %}
 <table>
     <thead>
@@ -7,6 +7,9 @@
             <th>{% trans "Command" %}</th>
             <th>{% trans "By" %}</th>
             <th>{% trans "ACK" %}</th>
+            {% if user|has_role:"admin" %}
+            <th></th>
+            {% endif %}
         </tr>
     </thead>
     <tbody>
@@ -16,10 +19,24 @@
             <td><code>{{ cmd.command }}</code></td>
             <td>{{ cmd.sent_by.username|default:"-" }}</td>
             <td>{% if cmd.acked %}{% trans "Yes" %}{% else %}{% trans "No" %}{% endif %}</td>
+            {% if user|has_role:"admin" %}
+            <td>
+                <form hx-post="{% url 'devices:delete_command' device.device_id cmd.id %}" hx-target="#command-log" hx-swap="innerHTML" hx-confirm="{% trans 'Delete this command?' %}" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="outline secondary" style="margin:0;padding:0.15em 0.4em;font-size:0.8em;">✕</button>
+                </form>
+            </td>
+            {% endif %}
         </tr>
         {% endfor %}
     </tbody>
 </table>
+{% if user|has_role:"admin" and commands %}
+<form hx-post="{% url 'devices:clear_commands' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML" hx-confirm="{% trans 'Delete all command history?' %}" style="margin:0;">
+    {% csrf_token %}
+    <button type="submit" class="outline secondary" style="font-size:0.85em;">{% trans "Clear all" %}</button>
+</form>
+{% endif %}
 {% else %}
 <p><small>{% trans "No commands sent." %}</small></p>
 {% endif %}
