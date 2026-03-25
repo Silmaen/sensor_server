@@ -30,11 +30,11 @@ All topics follow the pattern:
 {device_type}/{device_id}/{message_type}
 ```
 
-| Segment        | Description                                            | Constraints                                      |
-|----------------|--------------------------------------------------------|--------------------------------------------------|
-| `device_type`  | Category of device (e.g. `thermo`, `relay`)            | Alphanumeric, `-`, `_`. Max 128 chars.           |
-| `device_id`    | Unique identifier on the network                       | Alphanumeric, `-`, `_`. Max 128 chars.           |
-| `message_type` | One of: `sensors`, `status`, `command`, `capabilities`, `ack` |                                             |
+| Segment        | Description                                                   | Constraints                            |
+|----------------|---------------------------------------------------------------|----------------------------------------|
+| `device_type`  | Category of device (e.g. `thermo`, `relay`)                   | Alphanumeric, `-`, `_`. Max 128 chars. |
+| `device_id`    | Unique identifier on the network                              | Alphanumeric, `-`, `_`. Max 128 chars. |
+| `message_type` | One of: `sensors`, `status`, `command`, `capabilities`, `ack` |                                        |
 
 Identifiers containing MQTT wildcards (`+`, `#`) or slashes (`/`) are rejected.
 
@@ -182,10 +182,10 @@ Each entry in a `command_params` array is an object with:
 {"action": "set_interval", "status": "ok"}
 ```
 
-| Field    | Type   | Required | Description                                       |
-|----------|--------|:--------:|---------------------------------------------------|
-| `action` | string |   Yes    | The command action being acknowledged.             |
-| `status` | string |   Yes    | `"ok"` (command executed) or `"error"` (failed).   |
+| Field    | Type   | Required | Description                                      |
+|----------|--------|:--------:|--------------------------------------------------|
+| `action` | string |   Yes    | The command action being acknowledged.           |
+| `status` | string |   Yes    | `"ok"` (command executed) or `"error"` (failed). |
 
 **Server behavior:**
 - Finds the most recent unacknowledged `CommandLog` entry matching the device and action.

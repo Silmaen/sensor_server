@@ -43,11 +43,11 @@ open http://localhost:8000
 
 Devices communicate using the pattern `{device_type}/{device_id}/{message_type}`:
 
-| Topic pattern                  | Direction        | Payload                                                |
-|--------------------------------|------------------|--------------------------------------------------------|
-| `thermo/living01/sensors`      | Device -> Server | `{"temperature": 22.5, "humidity": 45}`                |
+| Topic pattern                  | Direction        | Payload                                               |
+|--------------------------------|------------------|-------------------------------------------------------|
+| `thermo/living01/sensors`      | Device -> Server | `{"temperature": 22.5, "humidity": 45}`               |
 | `thermo/living01/status`       | Device -> Server | `{"level": "warning", "message": "low_battery"}`      |
-| `thermo/living01/command`      | Server -> Device | `{"action": "set_interval", "value": 30}`              |
+| `thermo/living01/command`      | Server -> Device | `{"action": "set_interval", "value": 30}`             |
 | `thermo/living01/capabilities` | Device -> Server | `{"hardware_id": "...", "publish_interval": 60, ...}` |
 
 For the full protocol specification (message formats, device lifecycle, capabilities
