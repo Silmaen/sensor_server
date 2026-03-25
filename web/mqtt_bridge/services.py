@@ -220,6 +220,12 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
         logger.warning("Non-dict capabilities from %s/%s", device_type, device_id)
         return
 
+    logger.info(
+        "Received capabilities from %s/%s: keys=%s has_units=%s has_command_params=%s",
+        device_type, device_id, list(data.keys()),
+        "units" in data, "command_params" in data,
+    )
+
     try:
         device = Device.objects.get(device_id=device_id)
     except Device.DoesNotExist:
@@ -269,6 +275,14 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
             command_params[cmd_name] = valid_params
         capabilities["command_params"] = command_params
     device.capabilities = capabilities
+    logger.info(
+        "Stored capabilities for %s: metrics=%s units=%s commands=%s command_params=%s",
+        device_id,
+        capabilities.get("metrics"),
+        capabilities.get("units"),
+        capabilities.get("commands"),
+        capabilities.get("command_params"),
+    )
     device.capabilities_requested_at = None
     if device.alert_level == "error" and device.alert_message == "no_capabilities_response":
         device.alert_level = ""
