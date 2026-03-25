@@ -15,8 +15,10 @@
     .custom-range .grid { align-items: end; }
     .custom-range input { margin-bottom: 0; }
     .custom-range button { margin-bottom: 0; }
-    .chart-container { margin-bottom: 1.5rem; }
-    .chart-container h4 { margin-bottom: 0.3rem; }
+    .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
+    @media (max-width: 768px) { .chart-grid { grid-template-columns: 1fr; } }
+    .chart-panel { background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: 6px; padding: 0.5rem 0.75rem 0.25rem; }
+    .chart-panel h5 { margin: 0 0 0.25rem; font-size: 0.85em; color: var(--pico-muted-color); font-weight: 500; }
     .device-filter { margin-bottom: 1rem; }
     .device-filter .filter-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; padding-top: 0.5rem; }
     .device-filter label { font-size: 0.9em; white-space: nowrap; }
@@ -81,14 +83,16 @@
     </div>
 </details>
 
-{% for m in metrics %}
-<div class="chart-container">
-    <h4>{{ m }}</h4>
-    <div id="chart-{{ m }}" style="width:100%; height:350px;"></div>
+<div class="chart-grid">
+    {% for m in metrics %}
+    <div class="chart-panel">
+        <h5>{{ m }}</h5>
+        <div id="chart-{{ m }}" style="width:100%; height:280px;"></div>
+    </div>
+    {% empty %}
+    <p>{% trans "No metrics available." %}</p>
+    {% endfor %}
 </div>
-{% empty %}
-<p>{% trans "No metrics available." %}</p>
-{% endfor %}
 {% endblock %}
 
 {% block extra_scripts %}
@@ -103,22 +107,25 @@
         "#ea7ccc", "#48b8d0", "#ff9f7f", "#87cefa"
     ];
     var charts = {};
+    var allChartInstances = [];
     var currentPreset = "1d";
     var customStart = null;
     var customEnd = null;
     var refreshTimer = null;
 
-    // Initialize charts
     Object.keys(metricsDevices).forEach(function(metric) {
         var dom = document.getElementById("chart-" + metric);
-        if (dom) charts[metric] = echarts.init(dom);
+        if (dom) {
+            charts[metric] = echarts.init(dom);
+            allChartInstances.push(charts[metric]);
+        }
     });
+
+    echarts.connect(allChartInstances);
 
     function getSelectedDevices() {
         var selected = [];
-        document.querySelectorAll(".device-checkbox:checked").forEach(function(cb) {
-            selected.push(cb.value);
-        });
+        document.querySelectorAll(".device-checkbox:checked").forEach(function(cb) { selected.push(cb.value); });
         return selected;
     }
 
@@ -129,17 +136,11 @@
         } else {
             params = "preset=" + currentPreset;
         }
-
         var selectedDevices = getSelectedDevices();
 
         Object.keys(metricsDevices).forEach(function(metric) {
-            var devices = metricsDevices[metric].filter(function(d) {
-                return selectedDevices.indexOf(d) !== -1;
-            });
-            if (!devices.length || !charts[metric]) {
-                if (charts[metric]) charts[metric].clear();
-                return;
-            }
+            var devices = metricsDevices[metric].filter(function(d) { return selectedDevices.indexOf(d) !== -1; });
+            if (!devices.length || !charts[metric]) { if (charts[metric]) charts[metric].clear(); return; }
 
             fetch("/api/overview-chart/?metric=" + encodeURIComponent(metric) + "&devices=" + encodeURIComponent(devices.join(",")) + "&" + params)
                 .then(function(r) { return r.json(); })
@@ -152,34 +153,30 @@
                         var color = CHART_COLORS[idx % CHART_COLORS.length];
                         seriesArr.push({
                             name: deviceNames[did] || did,
-                            type: "line",
-                            smooth: true,
-                            showSymbol: false,
+                            type: "line", smooth: true, showSymbol: false,
+                            lineStyle: { width: 1.5 },
                             color: color,
-                            areaStyle: { opacity: 0.1 },
+                            areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: color + "30"}, {offset: 1, color: color + "05"}]) },
                             data: s.times.map(function(t, i) { return [t, s.values[i]]; }),
                         });
                     });
-                    var yName = metric;
                     var unit = data.unit || globalUnits[metric] || "";
-                    if (unit) yName += " (" + unit + ")";
+                    var yName = unit ? metric + " (" + unit + ")" : metric;
                     charts[metric].setOption({
-                        tooltip: { trigger: "axis" },
-                        legend: { show: deviceKeys.length > 1, type: "scroll", bottom: 0 },
-                        xAxis: { type: "time" },
-                        yAxis: { type: "value", name: yName },
-                        grid: { bottom: deviceKeys.length > 1 ? 40 : 20 },
+                        tooltip: { trigger: "axis", axisPointer: { type: "cross", label: { backgroundColor: "#6a7985" } } },
+                        legend: { show: deviceKeys.length > 1, type: "scroll", bottom: 0, textStyle: { fontSize: 11 } },
+                        xAxis: { type: "time", axisPointer: { show: true } },
+                        yAxis: { type: "value", name: yName, nameTextStyle: { fontSize: 11 }, splitLine: { lineStyle: { type: "dashed", opacity: 0.3 } } },
+                        grid: { top: 30, bottom: deviceKeys.length > 1 ? 45 : 25, left: 55, right: 15 },
                         series: seriesArr,
                     }, true);
                 });
         });
     }
 
-    // Preset buttons
     document.querySelectorAll(".preset-btn").forEach(function(btn) {
         btn.addEventListener("click", function() {
-            customStart = null;
-            customEnd = null;
+            customStart = null; customEnd = null;
             currentPreset = this.dataset.preset;
             document.querySelectorAll(".preset-btn").forEach(function(b) { b.classList.remove("active"); });
             this.classList.add("active");
@@ -187,7 +184,6 @@
         });
     });
 
-    // Custom range
     document.getElementById("apply-custom").addEventListener("click", function() {
         var s = document.getElementById("custom-start").value;
         var e = document.getElementById("custom-end").value;
@@ -199,10 +195,7 @@
         }
     });
 
-    // Device filter
-    document.querySelectorAll(".device-checkbox").forEach(function(cb) {
-        cb.addEventListener("change", loadAllCharts);
-    });
+    document.querySelectorAll(".device-checkbox").forEach(function(cb) { cb.addEventListener("change", loadAllCharts); });
     document.getElementById("select-all").addEventListener("click", function() {
         document.querySelectorAll(".device-checkbox").forEach(function(cb) { cb.checked = true; });
         loadAllCharts();
@@ -212,20 +205,14 @@
         loadAllCharts();
     });
 
-    // Refresh interval
     function setupRefresh() {
         if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
         var seconds = parseInt(document.getElementById("refresh-select").value, 10);
-        if (seconds > 0) {
-            refreshTimer = setInterval(loadAllCharts, seconds * 1000);
-        }
+        if (seconds > 0) { refreshTimer = setInterval(loadAllCharts, seconds * 1000); }
     }
     document.getElementById("refresh-select").addEventListener("change", setupRefresh);
 
-    // Resize
-    window.addEventListener("resize", function() {
-        Object.keys(charts).forEach(function(k) { charts[k].resize(); });
-    });
+    window.addEventListener("resize", function() { allChartInstances.forEach(function(c) { c.resize(); }); });
 
     loadAllCharts();
     setupRefresh();

@@ -16,6 +16,7 @@ Device (ESP8266)                           Server (Django MQTT worker)
       |--- sensors  /{type}/{id}/sensors --------->|  Sensor readings (JSON)
       |--- status   /{type}/{id}/status  --------->|  Alerts: warning/error (JSON)
       |--- capabilities /{type}/{id}/capabilities->|  Capabilities response (JSON)
+      |--- ack        /{type}/{id}/ack ----------->|  Command acknowledgement (JSON)
       |                                            |
       |<-- command  /{type}/{id}/command ----------|  Commands (JSON)
       |                                            |
@@ -33,7 +34,7 @@ All topics follow the pattern:
 |----------------|--------------------------------------------------------|--------------------------------------------------|
 | `device_type`  | Category of device (e.g. `thermo`, `relay`)            | Alphanumeric, `-`, `_`. Max 128 chars.           |
 | `device_id`    | Unique identifier on the network                       | Alphanumeric, `-`, `_`. Max 128 chars.           |
-| `message_type` | One of: `sensors`, `status`, `command`, `capabilities` |                                                  |
+| `message_type` | One of: `sensors`, `status`, `command`, `capabilities`, `ack` |                                             |
 
 Identifiers containing MQTT wildcards (`+`, `#`) or slashes (`/`) are rejected.
 
@@ -169,6 +170,34 @@ Each entry in a `command_params` array is an object with:
 - `units` and `command_params` are optional. If omitted, the server displays metrics
   without units and provides a raw JSON command input.
 
+### 5. Command acknowledgement (`ack`)
+
+**Direction:** Device -> Server
+
+**Topic:** `{device_type}/{device_id}/ack`
+
+**Payload:** JSON object acknowledging a previously received command.
+
+```json
+{"action": "set_interval", "status": "ok"}
+```
+
+| Field    | Type   | Required | Description                                       |
+|----------|--------|:--------:|---------------------------------------------------|
+| `action` | string |   Yes    | The command action being acknowledged.             |
+| `status` | string |   Yes    | `"ok"` (command executed) or `"error"` (failed).   |
+
+**Server behavior:**
+- Finds the most recent unacknowledged `CommandLog` entry matching the device and action.
+- Sets `acked = True` and records `acked_at` timestamp.
+- If no matching unacknowledged command is found, the message is logged and ignored.
+
+**Notes:**
+- Devices should send an ack as soon as the command has been processed.
+- The `action` field must exactly match the `action` in the original command.
+- Acks are optional — the server does not require them, but they enable
+  the admin UI to show whether a command was executed.
+
 ## Capabilities request flow
 
 The server requests capabilities by publishing on the device's `command` topic:
@@ -296,6 +325,8 @@ verified at the application level through the capabilities/approval workflow.
 | Command/metric names | `capabilities` | `^[a-zA-Z0-9_\-]+$`                            | Entry skipped   |
 | Unit strings         | `capabilities` | String, max 16 chars                           | Field ignored   |
 | Param type           | `capabilities` | Must be `"number"`, `"string"`, or `"boolean"` | Entry skipped   |
+| Ack action           | `ack`          | Non-empty string                               | Message dropped |
+| Ack status           | `ack`          | Must be `"ok"` or `"error"`                    | Message dropped |
 
 ## Example session
 

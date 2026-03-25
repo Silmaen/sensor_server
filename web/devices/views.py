@@ -73,9 +73,11 @@ def device_history_view(request, device_id):
 def device_admin_view(request, device_id):
     device = get_object_or_404(Device, device_id=device_id)
     commands = device.commands.select_related("sent_by")[:20]
+    command_params = (device.capabilities or {}).get("command_params", {})
     return render(request, "devices/device_admin.html", {
         "device": device,
         "commands": commands,
+        "command_params_json": json.dumps(command_params),
     })
 
 

@@ -15,8 +15,11 @@
     .custom-range .grid { align-items: end; }
     .custom-range input { margin-bottom: 0; }
     .custom-range button { margin-bottom: 0; }
-    .chart-container { margin-bottom: 1.5rem; }
-    .chart-container h4 { margin-bottom: 0.3rem; }
+    .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
+    @media (max-width: 768px) { .chart-grid { grid-template-columns: 1fr; } }
+    .chart-panel { background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: 6px; padding: 0.5rem 0.75rem 0.25rem; }
+    .chart-panel h5 { margin: 0 0 0.25rem; font-size: 0.85em; color: var(--pico-muted-color); font-weight: 500; }
+    .chart-panel-full { grid-column: 1 / -1; }
 </style>
 {% endblock %}
 
@@ -77,19 +80,20 @@
     </div>
 </details>
 
-<div class="chart-container">
-    <h4>{% trans "Device status" %}</h4>
-    <div id="chart-status-timeline" style="width:100%; height:80px;"></div>
+<div class="chart-grid">
+    <div class="chart-panel chart-panel-full">
+        <h5>{% trans "Device status" %}</h5>
+        <div id="chart-status-timeline" style="width:100%; height:60px;"></div>
+    </div>
+    {% for m in metrics %}
+    <div class="chart-panel">
+        <h5>{{ m }}{% if units_json != '{}' %}<span id="unit-label-{{ m }}"></span>{% endif %}</h5>
+        <div id="chart-{{ m }}" style="width:100%; height:250px;"></div>
+    </div>
+    {% empty %}
+    <p>{% trans "No metrics available for this device." %}</p>
+    {% endfor %}
 </div>
-
-{% for m in metrics %}
-<div class="chart-container">
-    <h4>{{ m }}</h4>
-    <div id="chart-{{ m }}" style="width:100%; height:300px;"></div>
-</div>
-{% empty %}
-<p>{% trans "No metrics available for this device." %}</p>
-{% endfor %}
 {% endblock %}
 
 {% block extra_scripts %}
@@ -103,30 +107,34 @@
         "#73c0de", "#3ba272", "#fc8452", "#9a60b4",
         "#ea7ccc", "#48b8d0", "#ff9f7f", "#87cefa"
     ];
+    var STATUS_COLORS = {"ok": "#2ecc40", "warning": "#e67e22", "error": "#e74c3c"};
     var charts = {};
+    var allChartInstances = [];
     var currentPreset = "1d";
     var customStart = null;
     var customEnd = null;
     var refreshTimer = null;
 
-    var STATUS_COLORS = {"ok": "#2ecc40", "warning": "#e67e22", "error": "#e74c3c"};
     var statusChart = echarts.init(document.getElementById("chart-status-timeline"));
+    allChartInstances.push(statusChart);
 
-    // Initialize charts
     metrics.forEach(function(metric) {
         var dom = document.getElementById("chart-" + metric);
         if (dom) {
             charts[metric] = echarts.init(dom);
+            allChartInstances.push(charts[metric]);
         }
     });
+
+    // Synchronized cursors across all charts
+    echarts.connect(allChartInstances);
 
     function loadStatusTimeline(params) {
         fetch("/api/status-timeline/" + encodeURIComponent(deviceId) + "/?" + params)
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                var pieces = [];
                 var renderData = [];
-                data.segments.forEach(function(seg, i) {
+                data.segments.forEach(function(seg) {
                     var color = STATUS_COLORS[seg.level] || STATUS_COLORS["ok"];
                     renderData.push([new Date(seg.start).getTime(), new Date(seg.end).getTime(), seg.level, seg.message || "", color]);
                 });
@@ -135,12 +143,10 @@
                         trigger: "item",
                         formatter: function(p) {
                             var d = p.data;
-                            var s = new Date(d[0]).toLocaleString();
-                            var e = new Date(d[1]).toLocaleString();
-                            return d[2].toUpperCase() + (d[3] ? ": " + d[3] : "") + "<br>" + s + " → " + e;
+                            return d[2].toUpperCase() + (d[3] ? ": " + d[3] : "") + "<br>" + new Date(d[0]).toLocaleString() + " → " + new Date(d[1]).toLocaleString();
                         }
                     },
-                    xAxis: { type: "time", show: true, axisLabel: { show: false } },
+                    xAxis: { type: "time", axisLabel: { show: false }, axisPointer: { show: true } },
                     yAxis: { show: false, max: 1 },
                     series: [{
                         type: "custom",
@@ -148,16 +154,12 @@
                             var start = api.coord([api.value(0), 0]);
                             var end = api.coord([api.value(1), 0]);
                             var height = api.size([0, 1])[1];
-                            return {
-                                type: "rect",
-                                shape: { x: start[0], y: start[1] - height, width: end[0] - start[0], height: height },
-                                style: { fill: api.value(4) }
-                            };
+                            return { type: "rect", shape: { x: start[0], y: start[1] - height, width: Math.max(end[0] - start[0], 1), height: height }, style: { fill: api.value(4) } };
                         },
                         encode: { x: [0, 1] },
                         data: renderData,
                     }],
-                    grid: { top: 5, bottom: 20, left: 50, right: 20 },
+                    grid: { top: 5, bottom: 15, left: 50, right: 20 },
                 }, true);
             });
     }
@@ -169,29 +171,30 @@
         } else {
             params = "preset=" + currentPreset;
         }
-
         loadStatusTimeline(params);
-
         metrics.forEach(function(metric, idx) {
             var color = CHART_COLORS[idx % CHART_COLORS.length];
             fetch("/api/chart/" + encodeURIComponent(deviceId) + "/?metric=" + encodeURIComponent(metric) + "&" + params)
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (!charts[metric]) return;
-                    var yName = metric;
                     var unit = data.unit || units[metric] || "";
-                    if (unit) yName += " (" + unit + ")";
+                    var yName = unit ? metric + " (" + unit + ")" : metric;
+                    var label = document.getElementById("unit-label-" + metric);
+                    if (label && unit) label.textContent = " (" + unit + ")";
                     charts[metric].setOption({
-                        tooltip: { trigger: "axis" },
-                        xAxis: { type: "time" },
-                        yAxis: { type: "value", name: yName },
+                        tooltip: { trigger: "axis", axisPointer: { type: "cross", label: { backgroundColor: "#6a7985" } } },
+                        xAxis: { type: "time", axisPointer: { show: true } },
+                        yAxis: { type: "value", name: yName, nameTextStyle: { fontSize: 11 }, splitLine: { lineStyle: { type: "dashed", opacity: 0.3 } } },
+                        grid: { top: 30, bottom: 25, left: 55, right: 15 },
                         series: [{
                             name: metric,
                             type: "line",
                             smooth: true,
                             showSymbol: false,
+                            lineStyle: { width: 1.5 },
                             color: color,
-                            areaStyle: { opacity: 0.15 },
+                            areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: color + "40"}, {offset: 1, color: color + "05"}]) },
                             data: data.times.map(function(t, i) { return [t, data.values[i]]; }),
                         }],
                     }, true);
@@ -199,11 +202,9 @@
         });
     }
 
-    // Preset buttons
     document.querySelectorAll(".preset-btn").forEach(function(btn) {
         btn.addEventListener("click", function() {
-            customStart = null;
-            customEnd = null;
+            customStart = null; customEnd = null;
             currentPreset = this.dataset.preset;
             document.querySelectorAll(".preset-btn").forEach(function(b) { b.classList.remove("active"); });
             this.classList.add("active");
@@ -211,7 +212,6 @@
         });
     });
 
-    // Custom range
     document.getElementById("apply-custom").addEventListener("click", function() {
         var s = document.getElementById("custom-start").value;
         var e = document.getElementById("custom-end").value;
@@ -223,23 +223,15 @@
         }
     });
 
-    // Refresh interval
     function setupRefresh() {
         if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
         var seconds = parseInt(document.getElementById("refresh-select").value, 10);
-        if (seconds > 0) {
-            refreshTimer = setInterval(function() {
-                // For presets, the window slides; for custom range, no slide
-                loadAllCharts();
-            }, seconds * 1000);
-        }
+        if (seconds > 0) { refreshTimer = setInterval(loadAllCharts, seconds * 1000); }
     }
     document.getElementById("refresh-select").addEventListener("change", setupRefresh);
 
-    // Resize
     window.addEventListener("resize", function() {
-        statusChart.resize();
-        Object.keys(charts).forEach(function(k) { charts[k].resize(); });
+        allChartInstances.forEach(function(c) { c.resize(); });
     });
 
     loadAllCharts();

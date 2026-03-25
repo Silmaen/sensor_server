@@ -8,7 +8,7 @@ from asgiref.sync import async_to_sync
 from django.conf import settings
 from django.utils import timezone as dj_timezone
 
-from devices.models import CAPABILITIES_RESPONSE_TIMEOUT, Device, DeviceStatusLog
+from devices.models import CAPABILITIES_RESPONSE_TIMEOUT, CommandLog, Device, DeviceStatusLog
 from readings.models import SensorReading
 
 logger = logging.getLogger(__name__)
@@ -281,3 +281,48 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
         "hardware_id", "publish_interval", "capabilities",
         "capabilities_requested_at", "alert_level", "alert_message",
     ])
+
+
+def handle_ack_message(device_type: str, device_id: str, payload: bytes):
+    """Process a command acknowledgement from a device."""
+    if len(payload) > MAX_PAYLOAD_SIZE:
+        logger.warning("Ack payload too large from %s/%s", device_type, device_id)
+        return
+
+    try:
+        data = json.loads(payload)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.warning("Invalid ack JSON from %s/%s", device_type, device_id)
+        return
+
+    if not isinstance(data, dict):
+        logger.warning("Non-dict ack from %s/%s", device_type, device_id)
+        return
+
+    try:
+        device = Device.objects.get(device_id=device_id)
+    except Device.DoesNotExist:
+        logger.warning("Ack from unknown device: %s", device_id)
+        return
+
+    action = data.get("action", "")
+    status = data.get("status", "")
+
+    if not action or status not in ("ok", "error"):
+        logger.warning("Invalid ack format from %s: action=%s status=%s", device_id, action, status)
+        return
+
+    # Find the most recent unacked command matching this action
+    cmd_log = (
+        CommandLog.objects
+        .filter(device=device, acked=False, command__action=action)
+        .order_by("-sent_at")
+        .first()
+    )
+    if cmd_log:
+        cmd_log.acked = True
+        cmd_log.acked_at = dj_timezone.now()
+        cmd_log.save(update_fields=["acked", "acked_at"])
+        logger.info("Acked command %s for device %s (status=%s)", action, device_id, status)
+    else:
+        logger.warning("No matching unacked command '%s' for device %s", action, device_id)

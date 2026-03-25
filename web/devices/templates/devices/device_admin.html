@@ -37,30 +37,42 @@
     <p><strong>{% trans "Publish interval:" %}</strong> {{ device.publish_interval }}s</p>
     {% endif %}
     {% if device.capabilities.metrics %}
-    <p><strong>{% trans "Metrics:" %}</strong>
+    <p><strong>{% trans "Metrics:" %}</strong></p>
+    <table>
+        <thead><tr><th>{% trans "Metric" %}</th><th>{% trans "Unit" %}</th></tr></thead>
+        <tbody>
         {% for m in device.capabilities.metrics %}
-            <code>{{ m }}</code>{% if device.capabilities.units %}<small>{% with unit=device.capabilities.units|get_item:m %}{% if unit %} ({{ unit }}){% endif %}{% endwith %}</small>{% endif %}{% if not forloop.last %}, {% endif %}
+        <tr>
+            <td><code>{{ m }}</code></td>
+            <td>{% if device.capabilities.units %}{{ device.capabilities.units|get_item:m|default:"-" }}{% else %}-{% endif %}</td>
+        </tr>
         {% endfor %}
-    </p>
+        </tbody>
+    </table>
     {% endif %}
     {% if device.capabilities.commands %}
-    <p><strong>{% trans "Accepted commands:" %}</strong>
+    <p><strong>{% trans "Accepted commands:" %}</strong></p>
+    <table>
+        <thead><tr><th>{% trans "Command" %}</th><th>{% trans "Parameters" %}</th></tr></thead>
+        <tbody>
         {% for c in device.capabilities.commands %}
-            <code>{{ c }}</code>{% if not forloop.last %}, {% endif %}
+        <tr>
+            <td><code>{{ c }}</code></td>
+            <td>
+                {% if device.capabilities.command_params %}
+                    {% with params=device.capabilities.command_params|get_item:c %}
+                    {% if params %}
+                        {% for p in params %}
+                            <strong>{{ p.name }}</strong> (<em>{{ p.type }}</em>){% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    {% else %}-{% endif %}
+                    {% endwith %}
+                {% else %}-{% endif %}
+            </td>
+        </tr>
         {% endfor %}
-    </p>
-    {% endif %}
-    {% if device.capabilities.command_params %}
-    <details>
-        <summary>{% trans "Command parameters" %}</summary>
-        {% for cmd, params in device.capabilities.command_params.items %}
-        <p><code>{{ cmd }}</code>:
-            {% for p in params %}
-                <strong>{{ p.name }}</strong> (<em>{{ p.type }}</em>){% if not forloop.last %}, {% endif %}
-            {% endfor %}
-        </p>
-        {% endfor %}
-    </details>
+        </tbody>
+    </table>
     {% endif %}
     {% if device.guest_visible_metrics %}
     <p><strong>{% trans "Guest-visible metrics:" %}</strong>
@@ -93,50 +105,30 @@
 </div>
 
 <h3>{% trans "Send command" %}</h3>
-{% if device.capabilities.commands and device.capabilities.command_params %}
-<form id="smart-command-form" hx-post="{% url 'devices:command' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML">
+<form id="command-form" hx-post="{% url 'devices:command' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML">
     {% csrf_token %}
-    <input type="hidden" name="command" id="smart-command-payload">
-    <label>{% trans "Action:" %}
-        <select id="cmd-action-select">
-            {% for c in device.capabilities.commands %}
-            <option value="{{ c }}">{{ c }}</option>
-            {% endfor %}
-        </select>
-    </label>
-    {% for cmd, params in device.capabilities.command_params.items %}
-    <div class="cmd-params" data-cmd="{{ cmd }}" style="display:none;">
-        {% for p in params %}
-        <label>{{ p.name }}
-            {% if p.type == "boolean" %}
-            <select name="param-{{ cmd }}-{{ p.name }}" data-param="{{ p.name }}" data-type="boolean">
-                <option value="true">true</option>
-                <option value="false">false</option>
+    <input type="hidden" name="command" id="command-payload">
+    <div class="grid">
+        <label>{% trans "Action:" %}
+            {% if device.capabilities.commands %}
+            <select id="cmd-action">
+                {% for c in device.capabilities.commands %}
+                <option value="{{ c }}">{{ c }}</option>
+                {% endfor %}
             </select>
-            {% elif p.type == "number" %}
-            <input type="number" step="any" name="param-{{ cmd }}-{{ p.name }}" data-param="{{ p.name }}" data-type="number">
             {% else %}
-            <input type="text" name="param-{{ cmd }}-{{ p.name }}" data-param="{{ p.name }}" data-type="string">
+            <input type="text" id="cmd-action" placeholder="set_interval" required>
             {% endif %}
         </label>
-        {% endfor %}
+        <label>{% trans "Parameters:" %}
+            <input type="text" id="cmd-params" placeholder="{% trans 'value1, value2, ...' %}">
+        </label>
+        <button type="submit" style="margin-top:auto;">{% trans "Send" %}</button>
     </div>
-    {% endfor %}
-    <button type="submit">{% trans "Send" %}</button>
+    {% if device.capabilities.command_params %}
+    <small id="cmd-hint" style="color:var(--pico-muted-color);"></small>
+    {% endif %}
 </form>
-<details>
-    <summary>{% trans "Raw JSON command" %}</summary>
-{% endif %}
-    <form hx-post="{% url 'devices:command' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML">
-        {% csrf_token %}
-        <div class="grid">
-            <input type="text" name="command" placeholder='{"action": "set_interval", "value": 30}' required>
-            <button type="submit">{% trans "Send" %}</button>
-        </div>
-    </form>
-{% if device.capabilities.commands and device.capabilities.command_params %}
-</details>
-{% endif %}
 
 <h3>{% trans "Command history" %}</h3>
 <div id="command-log">
@@ -145,36 +137,52 @@
 {% endblock %}
 
 {% block extra_scripts %}
-{% if device.capabilities.commands and device.capabilities.command_params %}
 <script>
 (function() {
-    var actionSelect = document.getElementById("cmd-action-select");
-    var form = document.getElementById("smart-command-form");
-    var payloadField = document.getElementById("smart-command-payload");
+    var form = document.getElementById("command-form");
+    var actionEl = document.getElementById("cmd-action");
+    var paramsInput = document.getElementById("cmd-params");
+    var payloadField = document.getElementById("command-payload");
+    var hintEl = document.getElementById("cmd-hint");
+    var commandParams = {{ command_params_json|safe }};
 
-    function showParams() {
-        document.querySelectorAll(".cmd-params").forEach(function(el) {
-            el.style.display = el.dataset.cmd === actionSelect.value ? "" : "none";
-        });
+    function updateHint() {
+        if (!hintEl) return;
+        var action = actionEl.value;
+        var params = commandParams[action];
+        if (params && params.length) {
+            hintEl.textContent = "{% trans 'Expected:' %} " + params.map(function(p) { return p.name + " (" + p.type + ")"; }).join(", ");
+        } else {
+            hintEl.textContent = "";
+        }
     }
-    actionSelect.addEventListener("change", showParams);
-    showParams();
+    if (actionEl.tagName === "SELECT") {
+        actionEl.addEventListener("change", updateHint);
+        updateHint();
+    }
 
     form.addEventListener("submit", function(e) {
-        var action = actionSelect.value;
-        var cmd = {action: action};
-        var paramsDiv = document.querySelector('.cmd-params[data-cmd="' + action + '"]');
-        if (paramsDiv) {
-            paramsDiv.querySelectorAll("[data-param]").forEach(function(input) {
-                var val = input.value;
-                if (input.dataset.type === "number") val = parseFloat(val) || 0;
-                else if (input.dataset.type === "boolean") val = val === "true";
-                cmd[input.dataset.param] = val;
-            });
+        var action = actionEl.value.trim();
+        if (!action) { e.preventDefault(); return; }
+        var cmd = {"action": action};
+        var raw = paramsInput.value.trim();
+        if (raw) {
+            var params = commandParams[action] || [];
+            var values = raw.split(",").map(function(v) { return v.trim(); });
+            for (var i = 0; i < values.length; i++) {
+                var pdef = params[i];
+                var val = values[i];
+                if (pdef) {
+                    if (pdef.type === "number") val = parseFloat(val) || 0;
+                    else if (pdef.type === "boolean") val = val === "true" || val === "1";
+                    cmd[pdef.name] = val;
+                } else {
+                    cmd["param" + i] = val;
+                }
+            }
         }
         payloadField.value = JSON.stringify(cmd);
     });
 })();
 </script>
-{% endif %}
 {% endblock %}

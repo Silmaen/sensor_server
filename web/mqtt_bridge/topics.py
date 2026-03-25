@@ -3,7 +3,9 @@
 # Status:       {device_type}/{device_id}/status        — JSON alert: {"level": "warning|error", "message": "..."}
 # Command:      {device_type}/{device_id}/command       — JSON command to device (published by server)
 # Capabilities: {device_type}/{device_id}/capabilities  — JSON capabilities response from device
+# Ack:          {device_type}/{device_id}/ack           — JSON command acknowledgement from device
 
 TOPIC_SENSORS = "+/+/sensors"
 TOPIC_STATUS = "+/+/status"
 TOPIC_CAPABILITIES = "+/+/capabilities"
+TOPIC_ACK = "+/+/ack"
