@@ -53,16 +53,19 @@ class Command(BaseCommand):
     def _on_connect(self, client, userdata, flags, reason_code, properties):
         if reason_code == 0:
             self.stdout.write(self.style.SUCCESS("Connected to MQTT broker"))
-            client.subscribe([
+            topics = [
                 (TOPIC_SENSORS, 1),
                 (TOPIC_STATUS, 1),
                 (TOPIC_CAPABILITIES, 1),
                 (TOPIC_ACK, 1),
-            ])
+            ]
+            client.subscribe(topics)
+            self.stdout.write(f"Subscribed to: {[t[0] for t in topics]}")
         else:
             logger.error("MQTT connect failed: %s", reason_code)
 
     def _on_message(self, client, userdata, msg):
+        logger.info("MQTT << %s (%d bytes)", msg.topic, len(msg.payload))
         parsed = parse_topic(msg.topic)
         if parsed is None:
             return
