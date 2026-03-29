@@ -427,3 +427,25 @@ msgstr "Intervalle de publication (secondes)"
 
 msgid "0 = unknown (default 5 min timeout). Used to compute online/offline status (3× interval)."
 msgstr "0 = inconnu (délai par défaut 5 min). Utilisé pour calculer le statut en ligne/hors ligne (3× l'intervalle)."
+
+#: readings/views, devices/templates (delete readings)
+msgid "Delete readings"
+msgstr "Supprimer des mesures"
+
+msgid "All metrics"
+msgstr "Toutes les métriques"
+
+msgid "Delete"
+msgstr "Supprimer"
+
+msgid "Delete selected readings? This cannot be undone."
+msgstr "Supprimer les mesures sélectionnées ? Cette action est irréversible."
+
+msgid "Invalid time range."
+msgstr "Plage de temps invalide."
+
+msgid "No readings found in this range."
+msgstr "Aucune mesure trouvée dans cette plage."
+
+msgid "%(count)d readings deleted."
+msgstr "%(count)d mesures supprimées."

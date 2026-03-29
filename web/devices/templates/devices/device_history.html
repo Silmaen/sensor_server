@@ -80,6 +80,33 @@
     </div>
 </details>
 
+{% if is_admin %}
+<details class="custom-range">
+    <summary>{% trans "Delete readings" %}</summary>
+    <form id="delete-readings-form">
+        {% csrf_token %}
+        <div class="grid">
+            <label>{% trans "Metric:" %}
+                <select name="metric">
+                    <option value="">{% trans "All metrics" %}</option>
+                    {% for m in metrics %}
+                    <option value="{{ m }}">{{ m }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>{% trans "From:" %}
+                <input type="datetime-local" name="start" required>
+            </label>
+            <label>{% trans "To:" %}
+                <input type="datetime-local" name="end" required>
+            </label>
+            <button type="submit" class="secondary" style="margin-top:auto;">{% trans "Delete" %}</button>
+        </div>
+    </form>
+    <small id="delete-result" style="display:none;"></small>
+</details>
+{% endif %}
+
 <div class="chart-grid">
     <div class="chart-panel chart-panel-full">
         <h5>{% trans "Device status" %}</h5>
@@ -236,6 +263,27 @@
 
     loadAllCharts();
     setupRefresh();
+
+    // Delete readings form
+    var deleteForm = document.getElementById("delete-readings-form");
+    if (deleteForm) {
+        deleteForm.addEventListener("submit", function(e) {
+            e.preventDefault();
+            if (!confirm("{% filter escapejs %}{% trans "Delete selected readings? This cannot be undone." %}{% endfilter %}")) return;
+            var formData = new FormData(deleteForm);
+            fetch("/api/delete-readings/" + encodeURIComponent(deviceId) + "/", {
+                method: "POST",
+                body: formData,
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var el = document.getElementById("delete-result");
+                el.textContent = data.message || data.error;
+                el.style.display = "";
+                if (data.deleted > 0) loadAllCharts();
+            });
+        });
+    }
 })();
 </script>
 {% endblock %}

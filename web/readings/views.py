@@ -1,17 +1,21 @@
 import json
+import logging
 from collections import defaultdict
 from datetime import timedelta
 
 from django.db import connection
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from django.utils.translation import gettext as _
 
 from accounts.decorators import role_required
 from devices.models import Device, DeviceStatusLog
 
 from .models import SensorReading
+
+logger = logging.getLogger(__name__)
 
 PRESETS = {
     "1h": timedelta(hours=1),
@@ -337,4 +341,66 @@ def overview_chart_data_view(request):
         "metric": metric,
         "unit": unit,
         "series": dict(series),
+    })
+
+
+# ---------------------------------------------------------------------------
+# Delete readings (admin only)
+# ---------------------------------------------------------------------------
+
+@role_required("admin")
+def delete_readings_view(request, device_id):
+    """Delete aberrant readings for a device within a time range."""
+    device = get_object_or_404(Device, device_id=device_id)
+
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    metric = request.POST.get("metric", "").strip()
+    start = parse_datetime(request.POST.get("start", ""))
+    end = parse_datetime(request.POST.get("end", ""))
+
+    if not start or not end or start >= end:
+        return JsonResponse({"error": _("Invalid time range.")}, status=400)
+
+    filters = {"device_id": device_id, "time__gte": start, "time__lte": end}
+    if metric:
+        filters["metric"] = metric
+
+    # Decompress any compressed chunks overlapping the time range
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT decompress_chunk(i.chunk_name::regclass, if_compressed => true)
+            FROM timescaledb_information.chunks i
+            WHERE i.hypertable_name = 'readings_sensorreading'
+              AND i.is_compressed = true
+              AND i.range_start::timestamptz <= %s
+              AND i.range_end::timestamptz >= %s;
+            """,
+            [end, start],
+        )
+
+    count = SensorReading.objects.filter(**filters).count()
+    if count == 0:
+        return JsonResponse({"deleted": 0, "message": _("No readings found in this range.")})
+
+    SensorReading.objects.filter(**filters).delete()
+
+    # Refresh continuous aggregates for the affected range
+    with connection.cursor() as cursor:
+        for view_name in ("readings_hourly", "readings_daily"):
+            cursor.execute(
+                f"CALL refresh_continuous_aggregate('{view_name}', %s::timestamptz, %s::timestamptz);",
+                [start, end],
+            )
+
+    logger.info(
+        "Deleted %d readings for device %s (metric=%s, range=%s to %s) by user %s",
+        count, device_id, metric or "ALL", start, end, request.user,
+    )
+
+    return JsonResponse({
+        "deleted": count,
+        "message": _("%(count)d readings deleted.") % {"count": count},
     })
