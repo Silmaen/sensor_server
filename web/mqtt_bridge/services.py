@@ -85,7 +85,33 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
     was_online = device.is_online
 
     device.last_seen = now
-    device.save(update_fields=["last_seen"])
+    update_fields = ["last_seen"]
+
+    # Clear alert when device resumes normal sensor publishing
+    if device.alert_level:
+        device.alert_level = ""
+        device.alert_message = ""
+        update_fields += ["alert_level", "alert_message"]
+        DeviceStatusLog.objects.create(
+            time=now, device=device,
+            alert_level="", alert_message="",
+        )
+        logger.info("Cleared alert for %s (normal sensor data received)", device_id)
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            "live_readings",
+            {
+                "type": "device_status",
+                "status": {
+                    "device_id": device_id,
+                    "alert_level": "",
+                    "alert_message": "",
+                    "device_name": device.effective_name,
+                },
+            },
+        )
+
+    device.save(update_fields=update_fields)
 
     # Request capabilities on new device or reconnection
     if created or not was_online:
