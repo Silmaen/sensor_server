@@ -14,6 +14,11 @@
         {% trans "Location" %}
         <input type="text" name="location" value="{{ device.location }}">
     </label>
+    <label>
+        {% trans "Publish interval (seconds)" %}
+        <input type="number" name="publish_interval" value="{{ device.publish_interval }}" min="0" max="86400">
+        <small>{% trans "0 = unknown (default 5 min timeout). Used to compute online/offline status (3× interval)." %}</small>
+    </label>
     {% if metrics %}
     <fieldset>
         <legend>{% trans "Guest-visible metrics" %}</legend>

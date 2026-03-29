@@ -420,3 +420,10 @@ msgstr "Supprimer tout l'historique des commandes ?"
 
 msgid "Clear all"
 msgstr "Tout effacer"
+
+#: devices/templates (device edit - publish interval)
+msgid "Publish interval (seconds)"
+msgstr "Intervalle de publication (secondes)"
+
+msgid "0 = unknown (default 5 min timeout). Used to compute online/offline status (3× interval)."
+msgstr "0 = inconnu (délai par défaut 5 min). Utilisé pour calculer le statut en ligne/hors ligne (3× l'intervalle)."

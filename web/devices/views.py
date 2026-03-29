@@ -91,7 +91,12 @@ def device_edit_view(request, device_id):
         device.display_name = request.POST.get("display_name", "")
         device.location = request.POST.get("location", "")
         device.guest_visible_metrics = request.POST.getlist("guest_visible_metrics")
-        device.save(update_fields=["display_name", "location", "guest_visible_metrics"])
+        try:
+            interval = int(request.POST.get("publish_interval", 0))
+            device.publish_interval = max(0, min(interval, 86400))
+        except (ValueError, TypeError):
+            pass
+        device.save(update_fields=["display_name", "location", "guest_visible_metrics", "publish_interval"])
         if request.headers.get("HX-Request"):
             return render(request, "devices/_device_card.html", {"device": device})
         return redirect("devices:admin", device_id=device.device_id)
