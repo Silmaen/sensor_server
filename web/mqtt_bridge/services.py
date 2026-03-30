@@ -17,6 +17,17 @@ MAX_PAYLOAD_SIZE = 10240  # 10 KB
 MAX_METRIC_NAME_LEN = 64
 SAFE_IDENTIFIER_RE = re.compile(r"^[a-zA-Z0-9_\-]+$")
 
+# Aliases for compact metric names sent by firmware.
+# Maps short/alternate names to canonical metric names used in the database.
+METRIC_ALIASES = {
+    "temp": "temperature",
+    "press": "pressure",
+    "uv": "uv_index",
+    "batv": "bat_voltage",
+    "bat": "bat_percent",
+    "wifi_rssi": "rssi",
+}
+
 
 def _is_safe_identifier(value: str) -> bool:
     """Reject identifiers containing MQTT wildcards (+, #) or path separators (/)."""
@@ -172,10 +183,11 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
     readings = []
     channel_layer = get_channel_layer()
 
-    for metric, value in data.items():
-        if not isinstance(metric, str) or len(metric) > MAX_METRIC_NAME_LEN or not SAFE_IDENTIFIER_RE.match(metric):
-            logger.debug("sensors %s/%s -> skipped invalid metric: %s", device_type, device_id, metric)
+    for raw_metric, value in data.items():
+        if not isinstance(raw_metric, str) or len(raw_metric) > MAX_METRIC_NAME_LEN or not SAFE_IDENTIFIER_RE.match(raw_metric):
+            logger.debug("sensors %s/%s -> skipped invalid metric: %s", device_type, device_id, raw_metric)
             continue
+        metric = METRIC_ALIASES.get(raw_metric, raw_metric)
         try:
             float_value = float(value)
         except (ValueError, TypeError):
