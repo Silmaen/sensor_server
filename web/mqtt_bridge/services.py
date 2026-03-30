@@ -293,35 +293,38 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
         logger.warning("Capabilities from unknown device: %s", device_id)
         return
 
-    hardware_id = data.get("hardware_id", "")
+    # Compact keys: "id", "intrvl", "metrics" (name→unit dict), "cmds" (name→params dict)
+    hardware_id = data.get("id", "")
     if isinstance(hardware_id, str) and len(hardware_id) <= 256:
         device.hardware_id = hardware_id
 
-    publish_interval = data.get("publish_interval", 0)
+    publish_interval = data.get("intrvl", 0)
     if isinstance(publish_interval, (int, float)) and 0 < publish_interval <= 86400:
         device.publish_interval = int(publish_interval)
 
     capabilities = {}
-    if isinstance(data.get("metrics"), list):
+
+    # metrics: {"name": "unit", ...} — merged metrics + units
+    if isinstance(data.get("metrics"), dict):
         capabilities["metrics"] = [
-            m for m in data["metrics"]
-            if isinstance(m, str) and SAFE_IDENTIFIER_RE.match(m)
-        ]
-    if isinstance(data.get("commands"), list):
-        capabilities["commands"] = [
-            c for c in data["commands"]
-            if isinstance(c, str) and SAFE_IDENTIFIER_RE.match(c)
-        ]
-    if isinstance(data.get("units"), dict):
-        capabilities["units"] = {
-            k: v for k, v in data["units"].items()
+            k for k in data["metrics"]
             if isinstance(k, str) and SAFE_IDENTIFIER_RE.match(k)
-            and isinstance(v, str) and len(v) <= 16
+        ]
+        capabilities["units"] = {
+            k: v for k, v in data["metrics"].items()
+            if isinstance(k, str) and SAFE_IDENTIFIER_RE.match(k)
+            and isinstance(v, str) and len(v) <= 16 and v
         }
+
+    # cmds: {"name": [params], ...} — merged commands + command_params
     valid_param_types = {"number", "string", "boolean"}
-    if isinstance(data.get("command_params"), dict):
+    if isinstance(data.get("cmds"), dict):
+        capabilities["commands"] = [
+            k for k in data["cmds"]
+            if isinstance(k, str) and SAFE_IDENTIFIER_RE.match(k)
+        ]
         command_params = {}
-        for cmd_name, params in data["command_params"].items():
+        for cmd_name, params in data["cmds"].items():
             if not isinstance(cmd_name, str) or not SAFE_IDENTIFIER_RE.match(cmd_name):
                 continue
             if not isinstance(params, list):
@@ -335,6 +338,7 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
                     valid_params.append({"name": p["name"], "type": p["type"]})
             command_params[cmd_name] = valid_params
         capabilities["command_params"] = command_params
+
     device.capabilities = capabilities
     logger.info(
         "Stored capabilities for %s: metrics=%s units=%s commands=%s command_params=%s",

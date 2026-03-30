@@ -131,46 +131,35 @@ device receives them when it reconnects. `request_capabilities` uses `retain=Fal
 
 ```json
 {
-  "hardware_id": "ESP-ABCDEF123456",
-  "publish_interval": 60,
-  "metrics": ["temperature", "humidity", "pressure"],
-  "units": {
-    "temperature": "°C",
-    "humidity": "%",
-    "pressure": "hPa"
-  },
-  "commands": ["set_interval", "set_led"],
-  "command_params": {
+  "id": "ESP-ABCDEF123456",
+  "intrvl": 60,
+  "metrics": {"temperature": "°C", "humidity": "%", "pressure": "hPa"},
+  "cmds": {
     "set_interval": [{"name": "value", "type": "number"}],
-    "set_led": [
-      {"name": "state", "type": "boolean"},
-      {"name": "brightness", "type": "number"}
-    ]
+    "set_led": [{"name": "state", "type": "boolean"}, {"name": "brightness", "type": "number"}]
   }
 }
 ```
 
-| Field              | Type     | Required | Description                                                                    |
-|--------------------|----------|:--------:|--------------------------------------------------------------------------------|
-| `hardware_id`      | string   |   Yes    | Unique hardware identifier (e.g. ESP chip ID). Max 256 chars.                  |
-| `publish_interval` | number   |   Yes    | Sensor publish frequency in seconds (1-86400).                                 |
-| `metrics`          | string[] |   Yes    | List of metric names the device reports.                                       |
-| `units`            | object   |    No    | Mapping of metric name to unit string (e.g. `"°C"`, `"%"`). Max 16 chars/unit. |
-| `commands`         | string[] |   Yes    | List of accepted command actions.                                              |
-| `command_params`   | object   |    No    | Mapping of command name to array of parameter definitions (see below).         |
+| Field     | Type   | Required | Description                                                          |
+|-----------|--------|:--------:|----------------------------------------------------------------------|
+| `id`      | string |   Yes    | Unique hardware identifier (e.g. ESP chip ID). Max 256 chars.        |
+| `intrvl`  | number |   Yes    | Sensor publish frequency in seconds (1-86400).                       |
+| `metrics` | object |   Yes    | Metric name → unit string (`""` if no unit). Max 16 chars per unit.  |
+| `cmds`    | object |   Yes    | Command name → array of parameter definitions (`[]` if no params).   |
 
 **Parameter definition format:**
 
-Each entry in a `command_params` array is an object with:
+Each entry in a `cmds` params array is an object with:
 - `name` (string, required): The parameter name.
 - `type` (string, required): One of `"number"`, `"string"`, `"boolean"`.
 
 **Notes:**
-- `commands` should **not** include `request_capabilities` itself — this command
+- `cmds` should **not** include `request_capabilities` itself — this command
   is always implicitly supported by all devices.
 - Metric and command names follow the same identifier rules (alphanumeric, `-`, `_`).
-- `units` and `command_params` are optional. If omitted, the server displays metrics
-  without units and provides a raw JSON command input.
+- The server extracts metric names from `metrics` keys and units from their values.
+  Empty unit strings are ignored.
 
 ### 5. Command acknowledgement (`ack`)
 
@@ -511,12 +500,10 @@ thermo/battery01/ack      <- {"action": "set_led", "status": "ok"}
 
 # 7. Device sends capabilities (reflects new interval + led state)
 thermo/battery01/capabilities <- {
-    "hardware_id": "MKR-1010-ABC123",
-    "publish_interval": 120,
-    "metrics": ["temperature", "humidity"],
-    "units": {"temperature": "°C", "humidity": "%"},
-    "commands": ["set_interval", "set_led"],
-    "command_params": {
+    "id": "MKR-1010-ABC123",
+    "intrvl": 120,
+    "metrics": {"temperature": "°C", "humidity": "%"},
+    "cmds": {
         "set_interval": [{"name": "value", "type": "number"}],
         "set_led": [{"name": "state", "type": "boolean"}]
     }
@@ -568,14 +555,10 @@ thermo/living01/command  -> {"action": "request_capabilities"}
 
 # 3. Device responds with capabilities
 thermo/living01/capabilities <- {
-    "hardware_id": "ESP-A1B2C3D4E5F6",
-    "publish_interval": 60,
-    "metrics": ["temperature", "humidity"],
-    "units": {"temperature": "°C", "humidity": "%"},
-    "commands": ["set_interval"],
-    "command_params": {
-        "set_interval": [{"name": "value", "type": "number"}]
-    }
+    "id": "ESP-A1B2C3D4E5F6",
+    "intrvl": 60,
+    "metrics": {"temperature": "°C", "humidity": "%"},
+    "cmds": {"set_interval": [{"name": "value", "type": "number"}]}
 }
 
 # 4. Admin approves the device from the web UI
@@ -592,14 +575,10 @@ thermo/living01/command  -> {"action": "request_capabilities"}
 
 # 8. Device responds with updated capabilities
 thermo/living01/capabilities <- {
-    "hardware_id": "ESP-A1B2C3D4E5F6",
-    "publish_interval": 120,
-    "metrics": ["temperature", "humidity"],
-    "units": {"temperature": "°C", "humidity": "%"},
-    "commands": ["set_interval"],
-    "command_params": {
-        "set_interval": [{"name": "value", "type": "number"}]
-    }
+    "id": "ESP-A1B2C3D4E5F6",
+    "intrvl": 120,
+    "metrics": {"temperature": "°C", "humidity": "%"},
+    "cmds": {"set_interval": [{"name": "value", "type": "number"}]}
 }
 
 # 9. No data for 360 seconds (3 x 120s) -> server considers device offline
