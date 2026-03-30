@@ -2,7 +2,7 @@ import json
 import logging
 import re
 
-from django.db import transaction
+from django.db import connection, transaction
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -296,6 +296,22 @@ def device_rename_view(request, device_id):
     })
 
 
+def _refresh_continuous_aggregates():
+    """Refresh TimescaleDB continuous aggregates after modifying raw readings.
+
+    Charts use readings_hourly (>48h) and readings_daily (>90d) which are
+    materialized views.  After changing device_id in the raw table, the
+    aggregates must be rebuilt so they reflect the new identifiers.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "CALL refresh_continuous_aggregate('readings_hourly', NULL, NULL);"
+        )
+        cursor.execute(
+            "CALL refresh_continuous_aggregate('readings_daily', NULL, NULL);"
+        )
+
+
 def _rename_device(device, new_id):
     """Rename a device by creating a copy with the new ID and migrating all data."""
     old_id = device.device_id
@@ -325,6 +341,7 @@ def _rename_device(device, new_id):
         CommandLog.objects.filter(device=device).update(device=new_device)
         # Delete old device
         device.delete()
+    _refresh_continuous_aggregates()
 
 
 def _merge_devices(source, target):
@@ -397,3 +414,4 @@ def _merge_devices(source, target):
 
         # Delete source device
         source.delete()
+    _refresh_continuous_aggregates()
