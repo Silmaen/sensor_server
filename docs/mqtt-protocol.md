@@ -1,8 +1,8 @@
 # MQTT Communication Protocol
 
-This document describes the MQTT protocol between IoT sensor devices (ESP8266)
-and the server. It covers topic structure, message formats, the device lifecycle,
-and error handling.
+This document describes the MQTT protocol between IoT sensor devices (ESP8266,
+MKR WiFi 1010, ESP32) and the server. It covers topic structure, message formats,
+the device lifecycle, battery-powered device support, and error handling.
 
 ## Overview
 
@@ -108,11 +108,13 @@ is computed server-side (see [Online/offline detection](#onlineoffline-detection
 {"action": "set_interval", "value": 30}
 ```
 
-The server publishes commands in two situations:
+The server publishes commands in three situations:
 - **User-initiated:** an admin or resident sends a command from the web UI
 - **Automatic:** the server sends `request_capabilities` (see below)
+- **Wake-up flush:** when a device reconnects, the server re-publishes all
+  unacknowledged commands (see [Battery-powered devices](#battery-powered-devices-deep-sleep))
 
-After every command, the server automatically sends a follow-up
+After every user-initiated command, the server automatically sends a follow-up
 `request_capabilities` to refresh the device's reported capabilities,
 since a command may change them (e.g. `set_interval` changes the publish rate).
 
@@ -294,9 +296,236 @@ message from the device.
                   | Sensor data received again
                   v
             +--------------+
-            |  Reconnected |  -> capabilities re-requested automatically
-            |  (active)    |
+            |  Reconnected |  -> pending commands flushed,
+            |  (active)    |     then capabilities re-requested
             +--------------+
+```
+
+## Battery-powered devices (deep sleep)
+
+Battery-powered devices (ESP8266/ESP32 in deep sleep, MKR WiFi 1010 on battery)
+disconnect from WiFi and MQTT between sensor readings to save power. They cannot
+receive commands while asleep. The server handles this transparently through a
+**command flush on wake-up** mechanism.
+
+### The problem
+
+- MQTT `retain` only keeps the **last** message per topic. If multiple commands
+  are sent while the device sleeps, only the last one would be delivered.
+- MQTT persistent sessions (`clean_session=false`) are unreliable over long
+  sleep periods (brokers may expire the session).
+- The device has no connectivity during sleep — it cannot subscribe or receive
+  anything.
+
+### How it works (server side)
+
+When the server detects that a device has come back online (first `sensors`
+message after being offline), it automatically:
+
+1. **Flushes all pending commands** — re-publishes every unacknowledged
+   `CommandLog` entry, in chronological order (oldest first), with `retain=True`.
+2. **Requests capabilities** — sends `{"action": "request_capabilities"}` as
+   usual, so the device reports its current state after processing the commands.
+
+This means the device does not need any special protocol support. It simply
+needs to **stay connected long enough** after publishing its sensor data to
+receive and process the queued commands.
+
+### Firmware implementation guide
+
+The wake-up cycle for a battery-powered device should follow this sequence:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. WAKE UP (timer / deep sleep reset)                      │
+│                                                             │
+│  2. CONNECT WiFi + MQTT                                     │
+│                                                             │
+│  3. SUBSCRIBE to {type}/{id}/command                        │
+│     (must happen BEFORE publishing sensors, so the device   │
+│      is ready to receive commands as soon as the server     │
+│      detects the wake-up)                                   │
+│                                                             │
+│  4. PUBLISH sensor readings on {type}/{id}/sensors          │
+│     → This triggers the server-side command flush.          │
+│                                                             │
+│  5. WAIT for incoming commands (3-5 seconds)                │
+│     Call mqttClient.loop() / client.check_msg() in a loop.  │
+│     Process each command as it arrives:                      │
+│       a. Execute the action (set_interval, set_led, etc.)   │
+│       b. Send ack on {type}/{id}/ack                        │
+│     If a "request_capabilities" is received:                │
+│       → Prepare capabilities response (do NOT ack)          │
+│                                                             │
+│  6. PUBLISH capabilities on {type}/{id}/capabilities        │
+│     (always send at the end — reflects state after          │
+│      all commands have been applied)                        │
+│                                                             │
+│  7. DISCONNECT MQTT + WiFi                                  │
+│                                                             │
+│  8. DEEP SLEEP for publish_interval seconds                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Key points for firmware developers
+
+- **Subscribe before publishing.** The server sends pending commands as soon as
+  it receives a `sensors` message. If the device subscribes after publishing,
+  commands may arrive before the subscription is active and be lost.
+
+- **Wait at least 3 seconds after publishing sensors.** The server needs time
+  to process the message, query pending commands, and publish them. 5 seconds
+  is a safe margin for slow networks.
+
+- **Process commands in order.** The server sends them chronologically. Each
+  command should be fully executed and acked before processing the next one.
+
+- **Do NOT ack `request_capabilities`.** This is not a regular command. The
+  server knows it has been fulfilled when it receives the `capabilities`
+  response. Simply publish your capabilities at the end of the wake cycle.
+
+- **Always send capabilities last.** This ensures the reported state (e.g.
+  `publish_interval`) reflects all commands that were just applied.
+
+- **Use `clean_session=true`.** Since the device sleeps for long periods,
+  persistent sessions are unreliable. The server-side flush makes them
+  unnecessary.
+
+- **Multiple commands may arrive.** If several commands were queued while the
+  device was asleep, they all arrive in the wait window. The firmware must
+  handle receiving more than one command per wake cycle.
+
+### Arduino pseudocode (ESP8266 / ESP32 / MKR WiFi 1010)
+
+```cpp
+#include <PubSubClient.h>
+
+const char* CMD_TOPIC  = "thermo/living01/command";
+const char* SENS_TOPIC = "thermo/living01/sensors";
+const char* ACK_TOPIC  = "thermo/living01/ack";
+const char* CAP_TOPIC  = "thermo/living01/capabilities";
+
+bool capabilitiesRequested = false;
+
+void onMessage(char* topic, byte* payload, unsigned int length) {
+    // Parse JSON command
+    StaticJsonDocument<256> doc;
+    deserializeJson(doc, payload, length);
+    const char* action = doc["action"];
+
+    if (strcmp(action, "request_capabilities") == 0) {
+        // Do NOT ack — just flag it, capabilities sent at end of cycle
+        capabilitiesRequested = true;
+        return;
+    }
+
+    // Execute command
+    if (strcmp(action, "set_interval") == 0) {
+        sleepSeconds = doc["value"];
+    }
+    // ... handle other commands ...
+
+    // Ack the command
+    StaticJsonDocument<128> ack;
+    ack["action"] = action;
+    ack["status"] = "ok";
+    char ackBuf[128];
+    serializeJson(ack, ackBuf);
+    mqttClient.publish(ACK_TOPIC, ackBuf);
+}
+
+void loop() {
+    // 1. Connect
+    connectWiFi();
+    mqttClient.setCallback(onMessage);
+    mqttClient.connect(clientId, mqttUser, mqttPass,
+                        /* cleanSession */ true);
+
+    // 2. Subscribe BEFORE publishing
+    mqttClient.subscribe(CMD_TOPIC);
+
+    // 3. Publish sensor data (triggers server-side command flush)
+    char sensorPayload[128];
+    snprintf(sensorPayload, sizeof(sensorPayload),
+             "{\"temperature\":%.1f,\"humidity\":%.1f}", temp, hum);
+    mqttClient.publish(SENS_TOPIC, sensorPayload);
+
+    // 4. Wait for commands (5 seconds)
+    capabilitiesRequested = false;
+    unsigned long start = millis();
+    while (millis() - start < 5000) {
+        mqttClient.loop();  // Processes incoming messages via callback
+        delay(50);
+    }
+
+    // 5. Always send capabilities (reflects post-command state)
+    publishCapabilities();
+
+    // 6. Disconnect and sleep
+    mqttClient.disconnect();
+    WiFi.disconnect();
+
+#if defined(ESP8266)
+    ESP.deepSleep(sleepSeconds * 1e6);
+#elif defined(ESP32)
+    esp_deep_sleep(sleepSeconds * 1e6);
+#else
+    // MKR WiFi 1010: use RTCZero or LowPower library
+    LowPower.deepSleep(sleepSeconds * 1000);
+#endif
+}
+```
+
+### Timing considerations
+
+| Parameter          | Recommended value | Notes                                        |
+|--------------------|-------------------|----------------------------------------------|
+| Wait window        | 5 seconds         | Time to receive commands after publishing     |
+| `publish_interval` | 60-300 seconds    | Balance between freshness and battery life    |
+| Offline threshold  | 3 &times; interval | Server considers device offline after this   |
+
+With a 5-minute interval and a 5-second wake window, the device is awake ~1.7%
+of the time. Actual battery impact depends on WiFi connection time (typically
+1-3 seconds) and transmit power.
+
+### Example session (battery-powered device)
+
+```
+# 1. Device wakes up, connects, subscribes to command topic
+
+# 2. Device publishes sensor data
+thermo/battery01/sensors  <- {"temperature": 19.3, "humidity": 62}
+
+# 3. Server detects reconnection, flushes 2 pending commands
+thermo/battery01/command  -> {"action": "set_interval", "value": 120}
+thermo/battery01/command  -> {"action": "set_led", "state": false}
+
+# 4. Server requests capabilities
+thermo/battery01/command  -> {"action": "request_capabilities"}
+
+# 5. Device processes set_interval, sends ack
+thermo/battery01/ack      <- {"action": "set_interval", "status": "ok"}
+
+# 6. Device processes set_led, sends ack
+thermo/battery01/ack      <- {"action": "set_led", "status": "ok"}
+
+# 7. Device sends capabilities (reflects new interval + led state)
+thermo/battery01/capabilities <- {
+    "hardware_id": "MKR-1010-ABC123",
+    "publish_interval": 120,
+    "metrics": ["temperature", "humidity"],
+    "units": {"temperature": "°C", "humidity": "%"},
+    "commands": ["set_interval", "set_led"],
+    "command_params": {
+        "set_interval": [{"name": "value", "type": "number"}],
+        "set_led": [{"name": "state", "type": "boolean"}]
+    }
+}
+
+# 8. Device disconnects and enters deep sleep for 120 seconds
+
+# 9. Server waits 360s (3 × 120s) with no data -> device marked offline
+#    (this is normal for battery devices — the device is just sleeping)
 ```
 
 ## Authentication
@@ -378,6 +607,6 @@ thermo/living01/capabilities <- {
 # 10. Device publishes again -> reconnection detected
 thermo/living01/sensors  <- {"temperature": 21.8, "humidity": 48}
 
-# 11. Server re-requests capabilities (reconnection)
+# 11. Server flushes any pending unacked commands, then re-requests capabilities
 thermo/living01/command  -> {"action": "request_capabilities"}
 ```

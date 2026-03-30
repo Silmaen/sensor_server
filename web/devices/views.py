@@ -1,15 +1,13 @@
 import json
 import logging
 
-import paho.mqtt.publish as mqtt_publish
-from django.conf import settings
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from accounts.decorators import role_required
-from mqtt_bridge.services import request_capabilities
+from mqtt_bridge.services import _mqtt_publish, request_capabilities
 from readings.models import SensorReading
 
 from .models import CommandLog, Device
@@ -126,14 +124,7 @@ def device_command_view(request, device_id):
     payload = json.dumps(command_data)
 
     try:
-        mqtt_publish.single(
-            topic,
-            payload=payload,
-            hostname=settings.MQTT_HOST,
-            port=settings.MQTT_PORT,
-            auth={"username": settings.MQTT_USER, "password": settings.MQTT_PASSWORD},
-            retain=True,
-        )
+        _mqtt_publish(topic, payload, retain=True)
     except Exception:
         logger.exception("Failed to publish MQTT command to %s", topic)
         return HttpResponseBadRequest(_("MQTT publish error."))

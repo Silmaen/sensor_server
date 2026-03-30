@@ -35,24 +35,58 @@ def parse_topic(topic: str) -> tuple[str, str, str] | None:
     return device_type, device_id, msg_type
 
 
+def _mqtt_publish(topic: str, payload: str, retain: bool = False):
+    """Publish a single MQTT message."""
+    mqtt_publish.single(
+        topic,
+        payload=payload,
+        hostname=settings.MQTT_HOST,
+        port=settings.MQTT_PORT,
+        auth={"username": settings.MQTT_USER, "password": settings.MQTT_PASSWORD},
+        retain=retain,
+    )
+
+
 def request_capabilities(device: Device):
     """Send a request_capabilities command to a device via MQTT."""
     topic = f"{device.device_type}/{device.device_id}/command"
     payload = json.dumps({"action": "request_capabilities"})
     try:
-        mqtt_publish.single(
-            topic,
-            payload=payload,
-            hostname=settings.MQTT_HOST,
-            port=settings.MQTT_PORT,
-            auth={"username": settings.MQTT_USER, "password": settings.MQTT_PASSWORD},
-            retain=False,
-        )
+        _mqtt_publish(topic, payload, retain=False)
         device.capabilities_requested_at = dj_timezone.now()
         device.save(update_fields=["capabilities_requested_at"])
         logger.info("Requested capabilities from %s", device.device_id)
     except Exception:
         logger.exception("Failed to request capabilities from %s", device.device_id)
+
+
+def flush_pending_commands(device: Device):
+    """Publish all unacked commands to a device that just woke up.
+
+    Called when a sleeping device reconnects (e.g. battery-powered devices
+    that only enable WiFi periodically). Commands are sent in chronological
+    order so the device processes them in the same sequence they were issued.
+    """
+    pending = (
+        CommandLog.objects
+        .filter(device=device, acked=False)
+        .order_by("sent_at")
+    )
+    if not pending.exists():
+        return
+
+    topic = f"{device.device_type}/{device.device_id}/command"
+    count = 0
+    for cmd in pending:
+        try:
+            _mqtt_publish(topic, json.dumps(cmd.command), retain=True)
+            count += 1
+        except Exception:
+            logger.exception(
+                "Failed to flush command %s to %s", cmd.pk, device.device_id,
+            )
+    if count:
+        logger.info("Flushed %d pending command(s) to %s", count, device.device_id)
 
 
 def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
@@ -113,8 +147,9 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
 
     device.save(update_fields=update_fields)
 
-    # Request capabilities on new device or reconnection
+    # On wake-up: flush pending commands, then request capabilities
     if created or not was_online:
+        flush_pending_commands(device)
         request_capabilities(device)
     elif device.capabilities_requested_at is not None:
         # Check for capabilities response timeout
