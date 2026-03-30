@@ -65,21 +65,27 @@ class Command(BaseCommand):
             logger.error("MQTT connect failed: %s", reason_code)
 
     def _on_message(self, client, userdata, msg):
-        logger.info("MQTT << %s (%d bytes)", msg.topic, len(msg.payload))
+        payload_str = msg.payload[:1024].decode("utf-8", errors="replace")
+        logger.info("MQTT << %s %s", msg.topic, payload_str)
         parsed = parse_topic(msg.topic)
         if parsed is None:
+            logger.warning("MQTT << %s -> rejected (bad topic format)", msg.topic)
             return
 
         device_type, device_id, msg_type = parsed
 
+        handlers = {
+            "sensors": handle_sensor_message,
+            "status": handle_status_message,
+            "capabilities": handle_capabilities_message,
+            "ack": handle_ack_message,
+        }
+        handler = handlers.get(msg_type)
+        if handler is None:
+            logger.warning("MQTT << %s -> ignored (unknown message type: %s)", msg.topic, msg_type)
+            return
+
         try:
-            if msg_type == "sensors":
-                handle_sensor_message(device_type, device_id, msg.payload)
-            elif msg_type == "status":
-                handle_status_message(device_type, device_id, msg.payload)
-            elif msg_type == "capabilities":
-                handle_capabilities_message(device_type, device_id, msg.payload)
-            elif msg_type == "ack":
-                handle_ack_message(device_type, device_id, msg.payload)
+            handler(device_type, device_id, msg.payload)
         except Exception:
             logger.exception("Error processing %s", msg.topic)

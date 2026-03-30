@@ -37,6 +37,7 @@ def parse_topic(topic: str) -> tuple[str, str, str] | None:
 
 def _mqtt_publish(topic: str, payload: str, retain: bool = False):
     """Publish a single MQTT message."""
+    logger.info("MQTT >> %s %s (retain=%s)", topic, payload, retain)
     mqtt_publish.single(
         topic,
         payload=payload,
@@ -55,9 +56,8 @@ def request_capabilities(device: Device):
         _mqtt_publish(topic, payload, retain=False)
         device.capabilities_requested_at = dj_timezone.now()
         device.save(update_fields=["capabilities_requested_at"])
-        logger.info("Requested capabilities from %s", device.device_id)
     except Exception:
-        logger.exception("Failed to request capabilities from %s", device.device_id)
+        logger.exception("MQTT >> %s -> publish failed", topic)
 
 
 def flush_pending_commands(device: Device):
@@ -82,27 +82,25 @@ def flush_pending_commands(device: Device):
             _mqtt_publish(topic, json.dumps(cmd.command), retain=True)
             count += 1
         except Exception:
-            logger.exception(
-                "Failed to flush command %s to %s", cmd.pk, device.device_id,
-            )
+            logger.exception("MQTT >> %s -> flush failed for command #%d", topic, cmd.pk)
     if count:
-        logger.info("Flushed %d pending command(s) to %s", count, device.device_id)
+        logger.info("flush %s/%s -> re-published %d pending command(s)", device.device_type, device.device_id, count)
 
 
 def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
     """Process a sensor reading message."""
     if len(payload) > MAX_PAYLOAD_SIZE:
-        logger.warning("Payload too large from %s/%s: %d bytes", device_type, device_id, len(payload))
+        logger.warning("sensors %s/%s -> rejected (payload too large: %d bytes)", device_type, device_id, len(payload))
         return
 
     try:
         data = json.loads(payload)
     except (json.JSONDecodeError, UnicodeDecodeError):
-        logger.warning("Invalid JSON from %s/%s: %s", device_type, device_id, payload[:100])
+        logger.warning("sensors %s/%s -> rejected (invalid JSON)", device_type, device_id)
         return
 
     if not isinstance(data, dict):
-        logger.warning("Non-dict JSON from %s/%s", device_type, device_id)
+        logger.warning("sensors %s/%s -> rejected (payload is not a JSON object)", device_type, device_id)
         return
 
     now = dj_timezone.now()
@@ -113,7 +111,7 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
         defaults={"device_type": device_type},
     )
     if created:
-        logger.info("Auto-discovered device: %s (type=%s)", device_id, device_type)
+        logger.info("sensors %s/%s -> new device discovered", device_type, device_id)
 
     # Detect reconnection (was offline) before updating last_seen
     was_online = device.is_online
@@ -130,7 +128,7 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
             time=now, device=device,
             alert_level="", alert_message="",
         )
-        logger.info("Cleared alert for %s (normal sensor data received)", device_id)
+        logger.info("sensors %s/%s -> cleared alert (normal data received)", device_type, device_id)
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
             "live_readings",
@@ -149,6 +147,7 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
 
     # On wake-up: flush pending commands, then request capabilities
     if created or not was_online:
+        logger.info("sensors %s/%s -> device woke up (was_online=%s, created=%s)", device_type, device_id, was_online, created)
         flush_pending_commands(device)
         request_capabilities(device)
     elif device.capabilities_requested_at is not None:
@@ -163,10 +162,10 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
                 time=now, device=device,
                 alert_level="error", alert_message="no_capabilities_response",
             )
-            logger.warning("Capabilities response timeout for %s", device_id)
+            logger.warning("sensors %s/%s -> capabilities timeout (%.0fs elapsed)", device_type, device_id, elapsed)
 
     if not device.is_approved:
-        logger.info("Dropping sensor data from unapproved device: %s", device_id)
+        logger.info("sensors %s/%s -> dropped (device not approved)", device_type, device_id)
         return
 
     # Insert readings
@@ -175,10 +174,12 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
 
     for metric, value in data.items():
         if not isinstance(metric, str) or len(metric) > MAX_METRIC_NAME_LEN or not SAFE_IDENTIFIER_RE.match(metric):
+            logger.debug("sensors %s/%s -> skipped invalid metric: %s", device_type, device_id, metric)
             continue
         try:
             float_value = float(value)
         except (ValueError, TypeError):
+            logger.debug("sensors %s/%s -> skipped non-numeric value for %s: %s", device_type, device_id, metric, value)
             continue
 
         readings.append(
@@ -203,44 +204,48 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
 
     if readings:
         SensorReading.objects.bulk_create(readings)
+        stored = {r.metric: r.value for r in readings}
+        logger.info("sensors %s/%s -> stored %d reading(s): %s", device_type, device_id, len(readings), stored)
 
 
 def handle_status_message(device_type: str, device_id: str, payload: bytes):
     """Process a device status (warning/error) message."""
     if len(payload) > MAX_PAYLOAD_SIZE:
-        logger.warning("Status payload too large from %s/%s", device_type, device_id)
+        logger.warning("status %s/%s -> rejected (payload too large: %d bytes)", device_type, device_id, len(payload))
         return
 
     try:
         data = json.loads(payload)
     except (json.JSONDecodeError, UnicodeDecodeError):
-        logger.warning("Invalid status JSON from %s/%s", device_type, device_id)
+        logger.warning("status %s/%s -> rejected (invalid JSON)", device_type, device_id)
         return
 
     if not isinstance(data, dict):
-        logger.warning("Non-dict status from %s/%s", device_type, device_id)
+        logger.warning("status %s/%s -> rejected (payload is not a JSON object)", device_type, device_id)
         return
 
     try:
         device = Device.objects.get(device_id=device_id)
     except Device.DoesNotExist:
-        logger.warning("Status from unknown device: %s", device_id)
+        logger.warning("status %s/%s -> rejected (unknown device)", device_type, device_id)
         return
 
     level = data.get("level", "")
     if level not in ("", "ok", "warning", "error"):
-        logger.warning("Invalid alert level from %s: %s", device_id, level)
+        logger.warning("status %s/%s -> rejected (invalid level: %s)", device_type, device_id, level)
         return
 
     # "ok" clears the alert
     if level in ("", "ok"):
         device.alert_level = ""
         device.alert_message = ""
+        logger.info("status %s/%s -> alert cleared", device_type, device_id)
     else:
         device.alert_level = level
         message = data.get("message", "")
         if isinstance(message, str):
             device.alert_message = message[:256]
+        logger.info("status %s/%s -> alert set: level=%s message=%s", device_type, device_id, level, device.alert_message)
 
     device.last_seen = dj_timezone.now()
     device.save(update_fields=["alert_level", "alert_message", "last_seen"])
@@ -268,29 +273,23 @@ def handle_status_message(device_type: str, device_id: str, payload: bytes):
 def handle_capabilities_message(device_type: str, device_id: str, payload: bytes):
     """Process a capabilities response from a device."""
     if len(payload) > MAX_PAYLOAD_SIZE:
-        logger.warning("Capabilities payload too large from %s/%s", device_type, device_id)
+        logger.warning("capabilities %s/%s -> rejected (payload too large: %d bytes)", device_type, device_id, len(payload))
         return
 
     try:
         data = json.loads(payload)
     except (json.JSONDecodeError, UnicodeDecodeError):
-        logger.warning("Invalid capabilities JSON from %s/%s", device_type, device_id)
+        logger.warning("capabilities %s/%s -> rejected (invalid JSON)", device_type, device_id)
         return
 
     if not isinstance(data, dict):
-        logger.warning("Non-dict capabilities from %s/%s", device_type, device_id)
+        logger.warning("capabilities %s/%s -> rejected (payload is not a JSON object)", device_type, device_id)
         return
-
-    logger.info(
-        "Received capabilities from %s/%s: keys=%s has_units=%s has_command_params=%s",
-        device_type, device_id, list(data.keys()),
-        "units" in data, "command_params" in data,
-    )
 
     try:
         device = Device.objects.get(device_id=device_id)
     except Device.DoesNotExist:
-        logger.warning("Capabilities from unknown device: %s", device_id)
+        logger.warning("capabilities %s/%s -> rejected (unknown device)", device_type, device_id)
         return
 
     # Compact keys: "id", "intrvl", "metrics" (name→unit dict), "cmds" (name→params dict)
@@ -340,22 +339,23 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
         capabilities["command_params"] = command_params
 
     device.capabilities = capabilities
-    logger.info(
-        "Stored capabilities for %s: metrics=%s units=%s commands=%s command_params=%s",
-        device_id,
-        capabilities.get("metrics"),
-        capabilities.get("units"),
-        capabilities.get("commands"),
-        capabilities.get("command_params"),
-    )
+    was_pending = device.capabilities_requested_at is not None
     device.capabilities_requested_at = None
-    if device.alert_level == "error" and device.alert_message == "no_capabilities_response":
+    had_timeout_alert = device.alert_level == "error" and device.alert_message == "no_capabilities_response"
+    if had_timeout_alert:
         device.alert_level = ""
         device.alert_message = ""
         DeviceStatusLog.objects.create(
             time=dj_timezone.now(), device=device,
             alert_level="", alert_message="",
         )
+    logger.info(
+        "capabilities %s/%s -> stored: hw=%s interval=%s metrics=%s commands=%s (pending_request=%s, cleared_timeout=%s)",
+        device_type, device_id,
+        device.hardware_id, device.publish_interval,
+        capabilities.get("metrics"), capabilities.get("commands"),
+        was_pending, had_timeout_alert,
+    )
     device.save(update_fields=[
         "hardware_id", "publish_interval", "capabilities",
         "capabilities_requested_at", "alert_level", "alert_message",
@@ -365,30 +365,30 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
 def handle_ack_message(device_type: str, device_id: str, payload: bytes):
     """Process a command acknowledgement from a device."""
     if len(payload) > MAX_PAYLOAD_SIZE:
-        logger.warning("Ack payload too large from %s/%s", device_type, device_id)
+        logger.warning("ack %s/%s -> rejected (payload too large: %d bytes)", device_type, device_id, len(payload))
         return
 
     try:
         data = json.loads(payload)
     except (json.JSONDecodeError, UnicodeDecodeError):
-        logger.warning("Invalid ack JSON from %s/%s", device_type, device_id)
+        logger.warning("ack %s/%s -> rejected (invalid JSON)", device_type, device_id)
         return
 
     if not isinstance(data, dict):
-        logger.warning("Non-dict ack from %s/%s", device_type, device_id)
+        logger.warning("ack %s/%s -> rejected (payload is not a JSON object)", device_type, device_id)
         return
 
     try:
         device = Device.objects.get(device_id=device_id)
     except Device.DoesNotExist:
-        logger.warning("Ack from unknown device: %s", device_id)
+        logger.warning("ack %s/%s -> rejected (unknown device)", device_type, device_id)
         return
 
     action = data.get("action", "")
     status = data.get("status", "")
 
     if not action or status not in ("ok", "error"):
-        logger.warning("Invalid ack format from %s: action=%s status=%s", device_id, action, status)
+        logger.warning("ack %s/%s -> rejected (invalid format: action=%s status=%s)", device_type, device_id, action, status)
         return
 
     # Find the most recent unacked command matching this action
@@ -402,6 +402,7 @@ def handle_ack_message(device_type: str, device_id: str, payload: bytes):
         cmd_log.acked = True
         cmd_log.acked_at = dj_timezone.now()
         cmd_log.save(update_fields=["acked", "acked_at"])
-        logger.info("Acked command %s for device %s (status=%s)", action, device_id, status)
+        delay = (cmd_log.acked_at - cmd_log.sent_at).total_seconds()
+        logger.info("ack %s/%s -> matched command #%d (%s) status=%s delay=%.1fs", device_type, device_id, cmd_log.pk, action, status, delay)
     else:
-        logger.warning("No matching unacked command '%s' for device %s", action, device_id)
+        logger.warning("ack %s/%s -> no matching pending command for action=%s", device_type, device_id, action)
