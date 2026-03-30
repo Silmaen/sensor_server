@@ -17,7 +17,7 @@
     <div id="metrics-{{ device.device_id }}" style="margin-top:0.5rem;">
         {% for metric, value in device.latest_metrics.items %}
         <div class="metric-row">
-            <strong>{{ metric }}:</strong> <span id="metric-{{ device.device_id }}-{{ metric }}">{{ value }}</span>
+            <strong>{{ metric|metric_label }}:</strong> <span id="metric-{{ device.device_id }}-{{ metric }}">{{ value }}</span> <small>{{ metric|metric_unit }}</small>
         </div>
         {% endfor %}
     </div>

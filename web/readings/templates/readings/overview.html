@@ -2,6 +2,7 @@
 {% load i18n device_tags %}
 {% block title %}{% trans "Overview" %}{% endblock %}
 
+
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <style>
@@ -86,7 +87,7 @@
 <div class="chart-grid">
     {% for m in metrics %}
     <div class="chart-panel">
-        <h5>{{ m }}</h5>
+        <h5>{{ m|metric_label }}</h5>
         <div id="chart-{{ m }}" style="width:100%; height:280px;"></div>
     </div>
     {% empty %}
@@ -101,6 +102,7 @@
     var metricsDevices = {{ metrics_devices_json|safe }};
     var deviceNames = {{ device_names_json|safe }};
     var globalUnits = {{ units_json|safe }};
+    var metricDisplay = {{ metrics_display_json|safe }};
     var CHART_COLORS = [
         "#5470c6", "#91cc75", "#fac858", "#ee6666",
         "#73c0de", "#3ba272", "#fc8452", "#9a60b4",
@@ -160,8 +162,10 @@
                             data: s.times.map(function(t, i) { return [t, s.values[i]]; }),
                         });
                     });
-                    var unit = data.unit || globalUnits[metric] || "";
-                    var yName = unit ? metric + " (" + unit + ")" : metric;
+                    var md = metricDisplay[metric] || {};
+                    var label = md.label || metric;
+                    var unit = data.unit || globalUnits[metric] || md.unit || "";
+                    var yName = unit ? label + " (" + unit + ")" : label;
                     charts[metric].setOption({
                         tooltip: { trigger: "axis", axisPointer: { type: "cross", label: { backgroundColor: "#6a7985" } } },
                         legend: { show: deviceKeys.length > 1, type: "scroll", bottom: 0, textStyle: { fontSize: 11 } },

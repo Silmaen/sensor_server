@@ -8,6 +8,7 @@ from django.utils.translation import gettext as _
 
 from accounts.decorators import role_required
 from mqtt_bridge.services import _mqtt_publish, request_capabilities
+from readings.metrics import get_metrics_display_map
 from readings.models import SensorReading
 
 from .models import CommandLog, Device
@@ -58,12 +59,18 @@ def device_history_view(request, device_id):
     )
 
     units = device.capabilities.get("units", {}) if device.capabilities else {}
+    metrics_display = get_metrics_display_map(metrics)
+    # Merge capability units into display map (capabilities take precedence)
+    for m, u in units.items():
+        if m in metrics_display and u:
+            metrics_display[m]["unit"] = u
 
     return render(request, "devices/device_history.html", {
         "device": device,
         "metrics": metrics,
         "metrics_json": json.dumps(metrics),
         "units_json": json.dumps(units),
+        "metrics_display_json": json.dumps(metrics_display),
         "is_admin": is_admin,
     })
 

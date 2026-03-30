@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n device_tags %}
 {% block title %}{% trans "Edit" %} {{ device.effective_name }}{% endblock %}
 
 {% block content %}
@@ -26,7 +26,7 @@
         <label>
             <input type="checkbox" name="guest_visible_metrics" value="{{ m }}"
                    {% if m in device.guest_visible_metrics %}checked{% endif %}>
-            {{ m }}
+            {{ m|metric_label }}
         </label>
         {% endfor %}
     </fieldset>

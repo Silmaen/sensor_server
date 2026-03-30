@@ -449,3 +449,28 @@ msgstr "Aucune mesure trouvée dans cette plage."
 
 msgid "%(count)d readings deleted."
 msgstr "%(count)d mesures supprimées."
+
+#: readings/metrics.py
+msgid "Temperature"
+msgstr "Température"
+
+msgid "Humidity"
+msgstr "Humidité"
+
+msgid "Pressure"
+msgstr "Pression"
+
+msgid "UV index"
+msgstr "Indice UV"
+
+msgid "Luminosity"
+msgstr "Luminosité"
+
+msgid "RSSI"
+msgstr "RSSI"
+
+msgid "Battery"
+msgstr "Batterie"
+
+msgid "Battery voltage"
+msgstr "Tension batterie"

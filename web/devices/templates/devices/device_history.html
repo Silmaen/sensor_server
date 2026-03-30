@@ -90,7 +90,7 @@
                 <select name="metric">
                     <option value="">{% trans "All metrics" %}</option>
                     {% for m in metrics %}
-                    <option value="{{ m }}">{{ m }}</option>
+                    <option value="{{ m }}">{{ m|metric_label }}</option>
                     {% endfor %}
                 </select>
             </label>
@@ -114,7 +114,7 @@
     </div>
     {% for m in metrics %}
     <div class="chart-panel">
-        <h5>{{ m }}{% if units_json != '{}' %}<span id="unit-label-{{ m }}"></span>{% endif %}</h5>
+        <h5>{{ m|metric_label }}{% if units_json != '{}' %}<span id="unit-label-{{ m }}"></span>{% endif %}</h5>
         <div id="chart-{{ m }}" style="width:100%; height:250px;"></div>
     </div>
     {% empty %}
@@ -129,6 +129,7 @@
     var deviceId = "{{ device.device_id|escapejs }}";
     var metrics = {{ metrics_json|safe }};
     var units = {{ units_json|safe }};
+    var metricDisplay = {{ metrics_display_json|safe }};
     var CHART_COLORS = [
         "#5470c6", "#91cc75", "#fac858", "#ee6666",
         "#73c0de", "#3ba272", "#fc8452", "#9a60b4",
@@ -205,8 +206,10 @@
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (!charts[metric]) return;
-                    var unit = data.unit || units[metric] || "";
-                    var yName = unit ? metric + " (" + unit + ")" : metric;
+                    var md = metricDisplay[metric] || {};
+                    var label = md.label || metric;
+                    var unit = data.unit || units[metric] || md.unit || "";
+                    var yName = unit ? label + " (" + unit + ")" : label;
                     var label = document.getElementById("unit-label-" + metric);
                     if (label && unit) label.textContent = " (" + unit + ")";
                     charts[metric].setOption({

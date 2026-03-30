@@ -13,6 +13,7 @@ from django.utils.translation import gettext as _
 from accounts.decorators import role_required
 from devices.models import Device, DeviceStatusLog
 
+from .metrics import get_metrics_display_map
 from .models import SensorReading
 
 logger = logging.getLogger(__name__)
@@ -123,7 +124,14 @@ def _annotate_devices_with_metrics(devices, guest_only):
 def dashboard_view(request):
     devices = Device.objects.filter(is_approved=True)
     _annotate_devices_with_metrics(devices, _is_guest_only(request))
-    return render(request, "readings/dashboard.html", {"devices": devices})
+    all_metrics = set()
+    for d in devices:
+        all_metrics.update(d.latest_metrics.keys())
+    metrics_display = get_metrics_display_map(all_metrics)
+    return render(request, "readings/dashboard.html", {
+        "devices": devices,
+        "metrics_display_json": json.dumps(metrics_display),
+    })
 
 
 @role_required("guest")
@@ -141,7 +149,7 @@ def dashboard_cards_view(request):
 @role_required("guest")
 def chart_data_view(request, device_id):
     device = get_object_or_404(Device, device_id=device_id, is_approved=True)
-    metric = request.GET.get("metric", "temp")
+    metric = request.GET.get("metric", "temperature")
 
     if _is_guest_only(request):
         if metric not in (device.guest_visible_metrics or []):
@@ -273,11 +281,19 @@ def overview_view(request):
                     continue
             metrics_devices[metric].append(device.device_id)
 
+    sorted_metrics = sorted(metrics_devices.keys())
+    metrics_display = get_metrics_display_map(sorted_metrics)
+    # Merge capability units (capabilities take precedence)
+    for m, u in units.items():
+        if m in metrics_display and u:
+            metrics_display[m]["unit"] = u
+
     return render(request, "readings/overview.html", {
         "metrics_devices_json": json.dumps(dict(metrics_devices)),
         "device_names_json": json.dumps(device_names),
         "units_json": json.dumps(units),
-        "metrics": sorted(metrics_devices.keys()),
+        "metrics_display_json": json.dumps(metrics_display),
+        "metrics": sorted_metrics,
         "devices": devices,
     })
 

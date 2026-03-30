@@ -1,5 +1,7 @@
 from django import template
 
+from readings.metrics import get_metric_label, get_metric_unit
+
 register = template.Library()
 
 
@@ -21,3 +23,15 @@ def get_item(dictionary, key):
     if isinstance(dictionary, dict):
         return dictionary.get(key, "")
     return ""
+
+
+@register.filter
+def metric_label(metric):
+    """Return translated display name for a metric."""
+    return get_metric_label(metric)
+
+
+@register.filter
+def metric_unit(metric):
+    """Return default unit for a metric."""
+    return get_metric_unit(metric)
