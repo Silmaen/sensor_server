@@ -33,11 +33,10 @@ def build_rename_sql(aliases, tables):
                 f"UPDATE {table} SET metric = '{new}' WHERE metric = '{old}';"
             )
 
-    # Recompress
+    # Recompress chunks older than 7 days
     statements.append(
         "SELECT compress_chunk(c, if_not_compressed => true) "
-        "FROM show_chunks('readings_sensorreading') c "
-        "WHERE c < now() - INTERVAL '7 days';"
+        "FROM show_chunks('readings_sensorreading', older_than => INTERVAL '7 days') c;"
     )
 
     return "\n".join(statements)
@@ -60,8 +59,7 @@ def build_reverse_sql(aliases, tables):
 
     statements.append(
         "SELECT compress_chunk(c, if_not_compressed => true) "
-        "FROM show_chunks('readings_sensorreading') c "
-        "WHERE c < now() - INTERVAL '7 days';"
+        "FROM show_chunks('readings_sensorreading', older_than => INTERVAL '7 days') c;"
     )
 
     return "\n".join(statements)
