@@ -135,8 +135,8 @@ device receives them when it reconnects. `request_capabilities` uses `retain=Fal
   "intrvl": 60,
   "metrics": {"temperature": "°C", "humidity": "%", "pressure": "hPa"},
   "cmds": {
-    "set_interval": [{"name": "value", "type": "number"}],
-    "set_led": [{"name": "state", "type": "boolean"}, {"name": "brightness", "type": "number"}]
+    "set_interval": [{"n": "value", "t": "number"}],
+    "set_led": [{"n": "state", "t": "boolean"}, {"n": "brightness", "t": "number"}]
   }
 }
 ```
@@ -151,8 +151,8 @@ device receives them when it reconnects. `request_capabilities` uses `retain=Fal
 **Parameter definition format:**
 
 Each entry in a `cmds` params array is an object with:
-- `name` (string, required): The parameter name.
-- `type` (string, required): One of `"number"`, `"string"`, `"boolean"`.
+- `n` (string, required): The parameter name.
+- `t` (string, required): One of `"number"`, `"string"`, `"boolean"`.
 
 **Notes:**
 - `cmds` should **not** include `request_capabilities` itself — this command
@@ -504,8 +504,8 @@ thermo/battery01/capabilities <- {
     "intrvl": 120,
     "metrics": {"temperature": "°C", "humidity": "%"},
     "cmds": {
-        "set_interval": [{"name": "value", "type": "number"}],
-        "set_led": [{"name": "state", "type": "boolean"}]
+        "set_interval": [{"n": "value", "t": "number"}],
+        "set_led": [{"n": "state", "t": "boolean"}]
     }
 }
 
@@ -558,7 +558,7 @@ thermo/living01/capabilities <- {
     "id": "ESP-A1B2C3D4E5F6",
     "intrvl": 60,
     "metrics": {"temperature": "°C", "humidity": "%"},
-    "cmds": {"set_interval": [{"name": "value", "type": "number"}]}
+    "cmds": {"set_interval": [{"n": "value", "t": "number"}]}
 }
 
 # 4. Admin approves the device from the web UI
@@ -578,7 +578,7 @@ thermo/living01/capabilities <- {
     "id": "ESP-A1B2C3D4E5F6",
     "intrvl": 120,
     "metrics": {"temperature": "°C", "humidity": "%"},
-    "cmds": {"set_interval": [{"name": "value", "type": "number"}]}
+    "cmds": {"set_interval": [{"n": "value", "t": "number"}]}
 }
 
 # 9. No data for 360 seconds (3 x 120s) -> server considers device offline

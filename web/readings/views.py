@@ -141,7 +141,7 @@ def dashboard_cards_view(request):
 @role_required("guest")
 def chart_data_view(request, device_id):
     device = get_object_or_404(Device, device_id=device_id, is_approved=True)
-    metric = request.GET.get("metric", "temperature")
+    metric = request.GET.get("metric", "temp")
 
     if _is_guest_only(request):
         if metric not in (device.guest_visible_metrics or []):

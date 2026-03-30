@@ -331,10 +331,10 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
             valid_params = []
             for p in params:
                 if (isinstance(p, dict)
-                        and isinstance(p.get("name"), str)
-                        and isinstance(p.get("type"), str)
-                        and p["type"] in valid_param_types):
-                    valid_params.append({"name": p["name"], "type": p["type"]})
+                        and isinstance(p.get("n"), str)
+                        and isinstance(p.get("t"), str)
+                        and p["t"] in valid_param_types):
+                    valid_params.append({"name": p["n"], "type": p["t"]})
             command_params[cmd_name] = valid_params
         capabilities["command_params"] = command_params
 
