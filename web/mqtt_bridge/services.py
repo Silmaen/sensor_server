@@ -21,10 +21,14 @@ SAFE_IDENTIFIER_RE = re.compile(r"^[a-zA-Z0-9_\-]+$")
 # Maps short/alternate names to canonical metric names used in the database.
 METRIC_ALIASES = {
     "temp": "temperature",
+    "humi": "humidity",
     "press": "pressure",
     "uv": "uv_index",
     "batv": "bat_voltage",
+    "battery_v": "bat_voltage",
     "bat": "bat_percent",
+    "battery_pct": "bat_percent",
+    "light_lux": "lux",
     "wifi_rssi": "rssi",
 }
 
