@@ -16,6 +16,7 @@
             <span class="badge badge-offline">{% trans "pending approval" %}</span>
         {% endif %}
         <a href="{% url 'devices:edit' device.device_id %}" role="button" class="outline" style="margin-left:0.5rem;">{% trans "Edit" %}</a>
+        <a href="{% url 'devices:rename' device.device_id %}" role="button" class="outline">{% trans "Rename" %}</a>
         <a href="{% url 'devices:history' device.device_id %}" role="button" class="outline">{% trans "View history" %}</a>
     </p>
 </hgroup>
@@ -134,6 +135,12 @@
 <div id="command-log">
     {% include "devices/_command_log.html" %}
 </div>
+
+<hr>
+<details>
+    <summary>{% trans "Danger zone" %}</summary>
+    <a href="{% url 'devices:delete' device.device_id %}" role="button" class="contrast">{% trans "Delete device" %}</a>
+</details>
 {% endblock %}
 
 {% block extra_scripts %}

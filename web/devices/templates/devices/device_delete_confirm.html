@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Delete device" %} — {{ device.effective_name }}{% endblock %}
+
+{% block content %}
+<h2>{% trans "Delete device" %}</h2>
+<p>{% blocktrans with name=device.effective_name id=device.device_id %}Are you sure you want to delete <strong>{{ name }}</strong> (<code>{{ id }}</code>)?{% endblocktrans %}</p>
+<p>{% blocktrans with count=reading_count %}This will permanently delete the device and <strong>{{ count }}</strong> sensor readings. This cannot be undone.{% endblocktrans %}</p>
+<form method="post">
+    {% csrf_token %}
+    <div class="grid">
+        <button type="submit" class="contrast">{% trans "Delete" %}</button>
+        <a href="{% url 'devices:admin' device.device_id %}" role="button" class="outline">{% trans "Cancel" %}</a>
+    </div>
+</form>
+{% endblock %}

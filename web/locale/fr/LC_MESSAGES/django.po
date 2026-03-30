@@ -474,3 +474,57 @@ msgstr "Batterie"
 
 msgid "Battery voltage"
 msgstr "Tension batterie"
+
+#: devices/views.py devices/templates (delete device)
+msgid "Delete device"
+msgstr "Supprimer l'appareil"
+
+msgid "Are you sure you want to delete <strong>%(name)s</strong> (<code>%(id)s</code>)?"
+msgstr "Êtes-vous sûr de vouloir supprimer <strong>%(name)s</strong> (<code>%(id)s</code>) ?"
+
+msgid "This will permanently delete the device and <strong>%(count)s</strong> sensor readings. This cannot be undone."
+msgstr "Cela supprimera définitivement l'appareil et <strong>%(count)s</strong> mesures. Cette action est irréversible."
+
+#: devices/views.py devices/templates (rename device)
+msgid "Rename device"
+msgstr "Renommer l'appareil"
+
+msgid "Rename"
+msgstr "Renommer"
+
+msgid "Current device ID: <code>%(name)s</code>"
+msgstr "ID de l'appareil actuel : <code>%(name)s</code>"
+
+msgid "New device ID"
+msgstr "Nouvel ID d'appareil"
+
+msgid "Letters, digits, hyphens, and underscores only."
+msgstr "Lettres, chiffres, tirets et underscores uniquement."
+
+msgid "If a device with this ID already exists, you will be asked to confirm a merge."
+msgstr "Si un appareil avec cet ID existe déjà, une confirmation de fusion vous sera demandée."
+
+msgid "Device ID cannot be empty."
+msgstr "L'ID de l'appareil ne peut pas être vide."
+
+msgid "Device ID may only contain letters, digits, hyphens, and underscores."
+msgstr "L'ID de l'appareil ne peut contenir que des lettres, chiffres, tirets et underscores."
+
+#: devices/views.py devices/templates (merge devices)
+msgid "Confirm merge"
+msgstr "Confirmer la fusion"
+
+msgid "Merge"
+msgstr "Fusionner"
+
+msgid "A device with ID <code>%(target)s</code> already exists. Renaming <code>%(source)s</code> will merge its data into <code>%(target)s</code>."
+msgstr "Un appareil avec l'ID <code>%(target)s</code> existe déjà. Renommer <code>%(source)s</code> fusionnera ses données dans <code>%(target)s</code>."
+
+msgid "For metrics that exist on both devices, the series with the most recent reading will be kept. The other series will be deleted."
+msgstr "Pour les métriques présentes sur les deux appareils, la série ayant la mesure la plus récente sera conservée. L'autre série sera supprimée."
+
+msgid "<strong>%(name)s</strong> will be deleted after the merge."
+msgstr "<strong>%(name)s</strong> sera supprimé après la fusion."
+
+msgid "Danger zone"
+msgstr "Zone de danger"

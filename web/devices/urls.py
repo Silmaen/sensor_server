@@ -14,4 +14,6 @@ urlpatterns = [
     path("<str:device_id>/request-capabilities/", views.device_request_capabilities_view, name="request_capabilities"),
     path("<str:device_id>/delete-command/<int:command_id>/", views.device_delete_command_view, name="delete_command"),
     path("<str:device_id>/clear-commands/", views.device_clear_commands_view, name="clear_commands"),
+    path("<str:device_id>/delete/", views.device_delete_view, name="delete"),
+    path("<str:device_id>/rename/", views.device_rename_view, name="rename"),
 ]

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Rename device" %} — {{ device.effective_name }}{% endblock %}
+
+{% block content %}
+<h2>{% trans "Rename device" %}</h2>
+<p>{% blocktrans with name=device.effective_name %}Current device ID: <code>{{ name }}</code>{% endblocktrans %}</p>
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% endif %}
+<form method="post">
+    {% csrf_token %}
+    <label>
+        {% trans "New device ID" %}
+        <input type="text" name="new_device_id" value="{{ device.device_id }}" required
+               pattern="[a-zA-Z0-9_-]+" title="{% trans "Letters, digits, hyphens, and underscores only." %}">
+    </label>
+    <small>{% trans "If a device with this ID already exists, you will be asked to confirm a merge." %}</small>
+    <div class="grid">
+        <button type="submit">{% trans "Rename" %}</button>
+        <a href="{% url 'devices:admin' device.device_id %}" role="button" class="outline">{% trans "Cancel" %}</a>
+    </div>
+</form>
+{% endblock %}
