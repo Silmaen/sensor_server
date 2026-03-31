@@ -59,10 +59,16 @@
     <summary>{% trans "Custom range" %}</summary>
     <div class="grid">
         <label>{% trans "From:" %}
-            <input type="datetime-local" id="custom-start">
+            <input type="date" id="custom-start-date">
+        </label>
+        <label>
+            <input type="time" id="custom-start-time" value="00:00">
         </label>
         <label>{% trans "To:" %}
-            <input type="datetime-local" id="custom-end">
+            <input type="date" id="custom-end-date">
+        </label>
+        <label>
+            <input type="time" id="custom-end-time" value="23:59">
         </label>
         <button id="apply-custom" class="outline">{% trans "Apply" %}</button>
     </div>
@@ -76,12 +82,18 @@
     </div>
     <div class="filter-grid">
         {% for d in devices %}
-        <label>
+        <label style="display:inline-flex;align-items:center;gap:0.3rem;">
             <input type="checkbox" class="device-checkbox" value="{{ d.device_id }}" checked>
             {{ d.effective_name }}
+            <a href="{% url 'devices:history' d.device_id %}" style="font-size:0.8em;" title="{% trans "View history" %}">&#8599;</a>
         </label>
         {% endfor %}
     </div>
+</details>
+
+<details open>
+    <summary>{% trans "Device status" %}</summary>
+    <div id="timeline-chart" style="width:100%;"></div>
 </details>
 
 <div class="chart-grid">
@@ -108,7 +120,9 @@
         "#73c0de", "#3ba272", "#fc8452", "#9a60b4",
         "#ea7ccc", "#48b8d0", "#ff9f7f", "#87cefa"
     ];
+    var STATUS_COLORS = {"ok": "#2ecc40", "warning": "#e67e22", "error": "#e74c3c"};
     var charts = {};
+    var timelineChart = null;
     var allChartInstances = [];
     var currentPreset = "1d";
     var customStart = null;
@@ -131,6 +145,77 @@
         return selected;
     }
 
+    function loadTimelines(params, selectedDevices) {
+        var chartDom = document.getElementById("timeline-chart");
+        if (!selectedDevices.length) {
+            if (timelineChart) { timelineChart.dispose(); timelineChart = null; }
+            chartDom.style.height = "0";
+            return;
+        }
+        var rowHeight = 30;
+        var topMargin = 10;
+        var bottomMargin = 25;
+        var totalHeight = topMargin + bottomMargin + selectedDevices.length * rowHeight;
+        chartDom.style.height = totalHeight + "px";
+        if (!timelineChart) {
+            timelineChart = echarts.init(chartDom);
+        } else {
+            timelineChart.resize();
+        }
+
+        var categories = selectedDevices.map(function(did) { return deviceNames[did] || did; });
+        var pending = selectedDevices.length;
+        var allRenderData = [];
+
+        selectedDevices.forEach(function(did, idx) {
+            fetch("/api/status-timeline/" + encodeURIComponent(did) + "/?" + params)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    data.segments.forEach(function(seg) {
+                        var color = STATUS_COLORS[seg.level] || STATUS_COLORS["ok"];
+                        allRenderData.push([new Date(seg.start).getTime(), new Date(seg.end).getTime(), idx, seg.level, seg.message || "", color]);
+                    });
+                    pending--;
+                    if (pending === 0) renderTimeline(categories, allRenderData, totalHeight);
+                });
+        });
+    }
+
+    function renderTimeline(categories, renderData, totalHeight) {
+        if (!timelineChart) return;
+        timelineChart.setOption({
+            tooltip: {
+                trigger: "item",
+                formatter: function(p) {
+                    var d = p.data;
+                    return "<strong>" + categories[d[2]] + "</strong><br>" +
+                        d[3].toUpperCase() + (d[4] ? ": " + d[4] : "") + "<br>" +
+                        new Date(d[0]).toLocaleString() + " → " + new Date(d[1]).toLocaleString();
+                }
+            },
+            xAxis: { type: "time", axisPointer: { show: true }, axisLabel: { fontSize: 10 } },
+            yAxis: { type: "category", data: categories, axisLabel: { fontSize: 11 }, inverse: true },
+            series: [{
+                type: "custom",
+                renderItem: function(params, api) {
+                    var catIdx = api.value(2);
+                    var start = api.coord([api.value(0), catIdx]);
+                    var end = api.coord([api.value(1), catIdx]);
+                    var bandWidth = api.size([0, 1])[1];
+                    var barHeight = bandWidth * 0.7;
+                    return {
+                        type: "rect",
+                        shape: { x: start[0], y: start[1] - barHeight / 2, width: Math.max(end[0] - start[0], 1), height: barHeight },
+                        style: { fill: api.value(5) }
+                    };
+                },
+                encode: { x: [0, 1], y: 2 },
+                data: renderData,
+            }],
+            grid: { top: 10, bottom: 25, left: 120, right: 15 },
+        }, true);
+    }
+
     function loadAllCharts() {
         var params;
         if (customStart && customEnd) {
@@ -139,6 +224,7 @@
             params = "preset=" + currentPreset;
         }
         var selectedDevices = getSelectedDevices();
+        loadTimelines(params, selectedDevices);
 
         Object.keys(metricsDevices).forEach(function(metric) {
             var devices = metricsDevices[metric].filter(function(d) { return selectedDevices.indexOf(d) !== -1; });
@@ -189,11 +275,13 @@
     });
 
     document.getElementById("apply-custom").addEventListener("click", function() {
-        var s = document.getElementById("custom-start").value;
-        var e = document.getElementById("custom-end").value;
-        if (s && e) {
-            customStart = new Date(s).toISOString();
-            customEnd = new Date(e).toISOString();
+        var sd = document.getElementById("custom-start-date").value;
+        var st = document.getElementById("custom-start-time").value || "00:00";
+        var ed = document.getElementById("custom-end-date").value;
+        var et = document.getElementById("custom-end-time").value || "23:59";
+        if (sd && ed) {
+            customStart = new Date(sd + "T" + st).toISOString();
+            customEnd = new Date(ed + "T" + et).toISOString();
             document.querySelectorAll(".preset-btn").forEach(function(b) { b.classList.remove("active"); });
             loadAllCharts();
         }
@@ -216,7 +304,10 @@
     }
     document.getElementById("refresh-select").addEventListener("change", setupRefresh);
 
-    window.addEventListener("resize", function() { allChartInstances.forEach(function(c) { c.resize(); }); });
+    window.addEventListener("resize", function() {
+        allChartInstances.forEach(function(c) { c.resize(); });
+        if (timelineChart) timelineChart.resize();
+    });
 
     loadAllCharts();
     setupRefresh();

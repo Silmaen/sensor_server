@@ -520,5 +520,11 @@ msgstr "Pour les métriques présentes sur les deux appareils, la série ayant l
 msgid "<strong>%(name)s</strong> will be deleted after the merge."
 msgstr "<strong>%(name)s</strong> sera supprimé après la fusion."
 
+msgid "Previous"
+msgstr "Précédent"
+
+msgid "Next"
+msgstr "Suivant"
+
 msgid "Danger zone"
 msgstr "Zone de danger"

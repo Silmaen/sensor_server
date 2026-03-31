@@ -24,9 +24,13 @@
 {% endblock %}
 
 {% block content %}
-<hgroup>
-    <h2>{{ device.effective_name }}</h2>
-    <p>
+<div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+    {% if prev_device_id %}
+    <a href="{% url 'devices:history' prev_device_id %}" role="button" class="outline" style="margin:0;padding:0.25em 0.6em;">&laquo; {% trans "Previous" %}</a>
+    {% endif %}
+    <hgroup style="flex:1;min-width:0;">
+    <h2 style="margin:0;">{{ device.effective_name }}</h2>
+    <p style="margin:0;">
         {{ device.device_type }} &mdash; {% if device.location %}{{ device.location }}{% else %}{% trans "Location not set" %}{% endif %}
         <span class="badge {% if device.is_online %}badge-online{% else %}badge-offline{% endif %}">
             {% if device.is_online %}{% trans "online" %}{% else %}{% trans "offline" %}{% endif %}
@@ -35,7 +39,11 @@
             <a href="{% url 'devices:admin' device.device_id %}" role="button" class="outline" style="margin-left:0.5rem;">{% trans "Administration" %}</a>
         {% endif %}
     </p>
-</hgroup>
+    </hgroup>
+    {% if next_device_id %}
+    <a href="{% url 'devices:history' next_device_id %}" role="button" class="outline" style="margin:0;padding:0.25em 0.6em;">{% trans "Next" %} &raquo;</a>
+    {% endif %}
+</div>
 
 {% if device.alert_level %}
 <p class="alert-{{ device.alert_level }}">
@@ -71,10 +79,16 @@
     <summary>{% trans "Custom range" %}</summary>
     <div class="grid">
         <label>{% trans "From:" %}
-            <input type="datetime-local" id="custom-start">
+            <input type="date" id="custom-start-date">
+        </label>
+        <label>
+            <input type="time" id="custom-start-time" value="00:00">
         </label>
         <label>{% trans "To:" %}
-            <input type="datetime-local" id="custom-end">
+            <input type="date" id="custom-end-date">
+        </label>
+        <label>
+            <input type="time" id="custom-end-time" value="23:59">
         </label>
         <button id="apply-custom" class="outline">{% trans "Apply" %}</button>
     </div>
@@ -95,10 +109,16 @@
                 </select>
             </label>
             <label>{% trans "From:" %}
-                <input type="datetime-local" name="start" required>
+                <input type="date" name="start-date" required>
+            </label>
+            <label>
+                <input type="time" name="start-time" value="00:00">
             </label>
             <label>{% trans "To:" %}
-                <input type="datetime-local" name="end" required>
+                <input type="date" name="end-date" required>
+            </label>
+            <label>
+                <input type="time" name="end-time" value="23:59">
             </label>
             <button type="submit" class="secondary" style="margin-top:auto;">{% trans "Delete" %}</button>
         </div>
@@ -110,7 +130,7 @@
 <div class="chart-grid">
     <div class="chart-panel chart-panel-full">
         <h5>{% trans "Device status" %}</h5>
-        <div id="chart-status-timeline" style="width:100%; height:60px;"></div>
+        <div id="chart-status-timeline" style="width:100%; height:80px;"></div>
     </div>
     {% for m in metrics %}
     <div class="chart-panel">
@@ -174,7 +194,7 @@
                             return d[2].toUpperCase() + (d[3] ? ": " + d[3] : "") + "<br>" + new Date(d[0]).toLocaleString() + " → " + new Date(d[1]).toLocaleString();
                         }
                     },
-                    xAxis: { type: "time", axisLabel: { show: false }, axisPointer: { show: true } },
+                    xAxis: { type: "time", axisLabel: { fontSize: 10 }, axisPointer: { show: true } },
                     yAxis: { show: false, max: 1 },
                     series: [{
                         type: "custom",
@@ -187,7 +207,7 @@
                         encode: { x: [0, 1] },
                         data: renderData,
                     }],
-                    grid: { top: 5, bottom: 15, left: 50, right: 20 },
+                    grid: { top: 5, bottom: 25, left: 55, right: 15 },
                 }, true);
             });
     }
@@ -243,11 +263,13 @@
     });
 
     document.getElementById("apply-custom").addEventListener("click", function() {
-        var s = document.getElementById("custom-start").value;
-        var e = document.getElementById("custom-end").value;
-        if (s && e) {
-            customStart = new Date(s).toISOString();
-            customEnd = new Date(e).toISOString();
+        var sd = document.getElementById("custom-start-date").value;
+        var st = document.getElementById("custom-start-time").value || "00:00";
+        var ed = document.getElementById("custom-end-date").value;
+        var et = document.getElementById("custom-end-time").value || "23:59";
+        if (sd && ed) {
+            customStart = new Date(sd + "T" + st).toISOString();
+            customEnd = new Date(ed + "T" + et).toISOString();
             document.querySelectorAll(".preset-btn").forEach(function(b) { b.classList.remove("active"); });
             loadAllCharts();
         }
@@ -274,6 +296,12 @@
             e.preventDefault();
             if (!confirm("{% filter escapejs %}{% trans "Delete selected readings? This cannot be undone." %}{% endfilter %}")) return;
             var formData = new FormData(deleteForm);
+            var dsd = formData.get("start-date"), dst = formData.get("start-time") || "00:00";
+            var ded = formData.get("end-date"), det = formData.get("end-time") || "23:59";
+            formData.set("start", dsd + "T" + dst);
+            formData.set("end", ded + "T" + det);
+            formData.delete("start-date"); formData.delete("start-time");
+            formData.delete("end-date"); formData.delete("end-time");
             fetch("/api/delete-readings/" + encodeURIComponent(deviceId) + "/", {
                 method: "POST",
                 body: formData,

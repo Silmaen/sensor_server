@@ -69,6 +69,19 @@ def device_history_view(request, device_id):
         if m in metrics_display and u:
             metrics_display[m]["unit"] = u
 
+    # Compute prev/next devices for navigation
+    approved_ids = list(
+        Device.objects.filter(is_approved=True)
+        .order_by("device_id")
+        .values_list("device_id", flat=True)
+    )
+    try:
+        idx = approved_ids.index(device_id)
+    except ValueError:
+        idx = -1
+    prev_device_id = approved_ids[idx - 1] if idx > 0 else None
+    next_device_id = approved_ids[idx + 1] if 0 <= idx < len(approved_ids) - 1 else None
+
     return render(request, "devices/device_history.html", {
         "device": device,
         "metrics": metrics,
@@ -76,6 +89,8 @@ def device_history_view(request, device_id):
         "units_json": json.dumps(units),
         "metrics_display_json": json.dumps(metrics_display),
         "is_admin": is_admin,
+        "prev_device_id": prev_device_id,
+        "next_device_id": next_device_id,
     })
 
 
