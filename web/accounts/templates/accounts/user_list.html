@@ -5,6 +5,7 @@
 {% block content %}
 <h2>{% trans "Pending users" %}</h2>
 {% if pending %}
+<div class="table-responsive">
 <table>
     <thead>
         <tr>
@@ -33,12 +34,14 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% else %}
 <p>{% trans "No pending users." %}</p>
 {% endif %}
 
 <h2>{% trans "Approved users" %}</h2>
 {% if approved %}
+<div class="table-responsive">
 <table>
     <thead>
         <tr>
@@ -77,6 +80,7 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% else %}
 <p>{% trans "No approved users." %}</p>
 {% endif %}

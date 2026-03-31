@@ -2,6 +2,7 @@
 
 {% if pending_devices %}
 <h3>{% trans "Pending approval" %}</h3>
+<div class="table-responsive">
 <table>
     <thead>
         <tr>
@@ -32,10 +33,12 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% endif %}
 
 <h3>{% trans "Approved devices" %}</h3>
 {% if approved_devices %}
+<div class="table-responsive">
 <table>
     <thead>
         <tr>
@@ -79,6 +82,7 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% else %}
 <p><small>{% trans "No devices detected. Devices will appear automatically when they publish to MQTT." %}</small></p>
 {% endif %}

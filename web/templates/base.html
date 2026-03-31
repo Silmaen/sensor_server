@@ -52,6 +52,15 @@
         .lang-select { position: relative; display: inline-block; margin: 0; }
         .lang-select select { appearance: none; background: none; border: none; color: inherit; cursor: pointer; font-size: 0.9em; padding: 0.2em 1.4em 0.2em 0.2em; }
         .lang-select::after { content: "\25BE"; position: absolute; right: 0.3em; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 0.7em; }
+        .nav-toggle { display: none; background: none; border: none; cursor: pointer; color: inherit; font-size: 1.5rem; padding: 0.2em 0.4em; margin: 0; }
+        @media (max-width: 768px) {
+            .nav-toggle { display: inline-block; }
+            nav .nav-links { display: none; flex-direction: column; width: 100%; padding: 0; }
+            nav .nav-links.open { display: flex; }
+            nav .nav-links li { padding: 0.3em 0; }
+            nav > ul:first-child { flex: 1; }
+        }
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
@@ -61,6 +70,11 @@
             <li><img src="{% static 'logo.svg' %}" alt="Logo" style="height:2rem;vertical-align:middle;margin-right:0.4rem"><strong>{% trans "IoT Sensors" %}</strong></li>
         </ul>
         <ul>
+            <li>
+                <button class="nav-toggle" aria-label="Menu" onclick="document.querySelector('.nav-links').classList.toggle('open')">&#9776;</button>
+            </li>
+        </ul>
+        <ul class="nav-links">
             {% if user.is_authenticated and is_approved %}
                 <li><a href="{% url 'readings:dashboard' %}">{% trans "Dashboard" %}</a></li>
                 <li><a href="{% url 'readings:overview' %}">{% trans "Overview" %}</a></li>

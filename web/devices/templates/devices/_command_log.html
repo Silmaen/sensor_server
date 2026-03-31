@@ -1,5 +1,6 @@
 {% load i18n device_tags %}
 {% if commands %}
+<div class="table-responsive">
 <table>
     <thead>
         <tr>
@@ -31,6 +32,7 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% if user|has_role:"admin" and commands %}
 <form hx-post="{% url 'devices:clear_commands' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML" hx-confirm="{% trans 'Delete all command history?' %}" style="margin:0;">
     {% csrf_token %}

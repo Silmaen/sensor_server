@@ -451,12 +451,6 @@ msgid "%(count)d readings deleted."
 msgstr "%(count)d mesures supprimées."
 
 #: readings/metrics.py
-msgid "Temperature"
-msgstr "Température"
-
-msgid "Humidity"
-msgstr "Humidité"
-
 msgid "Pressure"
 msgstr "Pression"
 
