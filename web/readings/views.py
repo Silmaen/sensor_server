@@ -120,6 +120,27 @@ def _annotate_devices_with_metrics(devices, guest_only):
 # Dashboard
 # ---------------------------------------------------------------------------
 
+def _compute_averages(devices):
+    """Compute per-metric averages grouped by location_type (indoor/outdoor)."""
+    # {group: {metric: [values]}}
+    groups = {"indoor": defaultdict(list), "outdoor": defaultdict(list)}
+    for d in devices:
+        grp = d.location_type if d.location_type in groups else None
+        if grp is None:
+            continue
+        for metric, value in d.latest_metrics.items():
+            groups[grp][metric].append(value)
+    # {group: {metric: avg}}
+    averages = {}
+    for grp, metrics in groups.items():
+        avgs = {}
+        for metric, values in metrics.items():
+            avgs[metric] = round(sum(values) / len(values), 1)
+        if avgs:
+            averages[grp] = avgs
+    return averages
+
+
 @role_required("guest")
 def dashboard_view(request):
     devices = Device.objects.filter(is_approved=True)
@@ -128,9 +149,11 @@ def dashboard_view(request):
     for d in devices:
         all_metrics.update(d.latest_metrics.keys())
     metrics_display = get_metrics_display_map(all_metrics)
+    averages = _compute_averages(devices)
     return render(request, "readings/dashboard.html", {
         "devices": devices,
         "metrics_display_json": json.dumps(metrics_display),
+        "averages": averages,
     })
 
 
@@ -139,7 +162,11 @@ def dashboard_cards_view(request):
     """HTMX partial: return only the device card grid for auto-refresh."""
     devices = Device.objects.filter(is_approved=True)
     _annotate_devices_with_metrics(devices, _is_guest_only(request))
-    return render(request, "readings/_dashboard_cards.html", {"devices": devices})
+    averages = _compute_averages(devices)
+    return render(request, "readings/_dashboard_cards.html", {
+        "devices": devices,
+        "averages": averages,
+    })
 
 
 # ---------------------------------------------------------------------------

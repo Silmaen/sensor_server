@@ -20,14 +20,14 @@
             <td>{{ profile.user.get_full_name|default:profile.user.username }}</td>
             <td>{{ profile.user.email }}</td>
             <td>
-                <form method="post" action="{% url 'accounts:user_set_role' profile.user.id %}" style="display:inline">
+                <form method="post" action="{% url 'accounts:user_set_role' profile.user.id %}" style="display:inline-flex; align-items:center; gap:0.3rem; margin:0;">
                     {% csrf_token %}
-                    <select name="role">
+                    <select name="role" style="margin:0; padding:0.2em 0.4em; font-size:0.85em; width:auto;">
                         <option value="guest">{% trans "Guest" %}</option>
                         <option value="resident">{% trans "Resident" %}</option>
                         <option value="admin">{% trans "Admin" %}</option>
                     </select>
-                    <button type="submit" class="outline">{% trans "Approve" %}</button>
+                    <button type="submit" class="outline btn-sm">{% trans "Approve" %}</button>
                 </form>
             </td>
         </tr>
@@ -64,15 +64,15 @@
                 {% if profile.user.is_superuser %}
                     <small>{% trans "Protected" %}</small>
                 {% else %}
-                    <form method="post" action="{% url 'accounts:user_set_role' profile.user.id %}" style="display:inline">
+                    <form method="post" action="{% url 'accounts:user_set_role' profile.user.id %}" style="display:inline-flex; align-items:center; gap:0.3rem; margin:0;">
                         {% csrf_token %}
-                        <select name="role">
+                        <select name="role" style="margin:0; padding:0.2em 0.4em; font-size:0.85em; width:auto;">
                             <option value="guest" {% if profile.role == "guest" %}selected{% endif %}>{% trans "Guest" %}</option>
                             <option value="resident" {% if profile.role == "resident" %}selected{% endif %}>{% trans "Resident" %}</option>
                             <option value="admin" {% if profile.role == "admin" %}selected{% endif %}>{% trans "Admin" %}</option>
                             <option value="revoke">{% trans "Revoke" %}</option>
                         </select>
-                        <button type="submit" class="outline">{% trans "Update" %}</button>
+                        <button type="submit" class="outline btn-sm">{% trans "Update" %}</button>
                     </form>
                 {% endif %}
             </td>

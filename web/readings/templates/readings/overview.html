@@ -20,44 +20,40 @@
     @media (max-width: 768px) { .chart-grid { grid-template-columns: 1fr; } }
     .chart-panel { background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: 6px; padding: 0.5rem 0.75rem 0.25rem; }
     .chart-panel h5 { margin: 0 0 0.25rem; font-size: 0.85em; color: var(--pico-muted-color); font-weight: 500; }
-    .device-filter { margin-bottom: 1rem; }
-    .device-filter .filter-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; padding-top: 0.5rem; }
-    .device-filter label { font-size: 0.9em; white-space: nowrap; }
-    .device-filter .filter-actions { margin-bottom: 0.5rem; }
-    .device-filter .filter-actions button { margin: 0; padding: 0.15em 0.5em; font-size: 0.8em; }
+    .device-links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+    .device-links a { font-size: 0.9em; white-space: nowrap; }
 </style>
 {% endblock %}
 
 {% block content %}
 <h2>{% trans "Overview" %}</h2>
 
-<div class="toolbar">
-    <div class="presets">
-        <button class="preset-btn outline" data-preset="1h">{% trans "1 hour" %}</button>
-        <button class="preset-btn outline" data-preset="6h">{% trans "6 hours" %}</button>
-        <button class="preset-btn outline active" data-preset="1d">{% trans "1 day" %}</button>
-        <button class="preset-btn outline" data-preset="7d">{% trans "7 days" %}</button>
-        <button class="preset-btn outline" data-preset="1m">{% trans "1 month" %}</button>
-        <button class="preset-btn outline" data-preset="2m">{% trans "2 months" %}</button>
-        <button class="preset-btn outline" data-preset="3m">{% trans "3 months" %}</button>
-        <button class="preset-btn outline" data-preset="1y">{% trans "1 year" %}</button>
+<details class="custom-range" open>
+    <summary>{% trans "Time range" %}</summary>
+    <div class="toolbar">
+        <div class="presets">
+            <button class="preset-btn outline" data-preset="1h">{% trans "1 hour" %}</button>
+            <button class="preset-btn outline" data-preset="6h">{% trans "6 hours" %}</button>
+            <button class="preset-btn outline active" data-preset="1d">{% trans "1 day" %}</button>
+            <button class="preset-btn outline" data-preset="7d">{% trans "7 days" %}</button>
+            <button class="preset-btn outline" data-preset="1m">{% trans "1 month" %}</button>
+            <button class="preset-btn outline" data-preset="2m">{% trans "2 months" %}</button>
+            <button class="preset-btn outline" data-preset="3m">{% trans "3 months" %}</button>
+            <button class="preset-btn outline" data-preset="1y">{% trans "1 year" %}</button>
+        </div>
+        <div class="refresh-group">
+            <small>{% trans "Refresh:" %}</small>
+            <select id="refresh-select">
+                <option value="0">{% trans "Off" %}</option>
+                <option value="10">10s</option>
+                <option value="30">30s</option>
+                <option value="60" selected>1m</option>
+                <option value="300">5m</option>
+                <option value="900">15m</option>
+            </select>
+        </div>
     </div>
-    <div class="refresh-group">
-        <small>{% trans "Refresh:" %}</small>
-        <select id="refresh-select">
-            <option value="0">{% trans "Off" %}</option>
-            <option value="10">10s</option>
-            <option value="30">30s</option>
-            <option value="60" selected>1m</option>
-            <option value="300">5m</option>
-            <option value="900">15m</option>
-        </select>
-    </div>
-</div>
-
-<details class="custom-range">
-    <summary>{% trans "Custom range" %}</summary>
-    <div class="grid">
+    <div class="grid" style="margin-top:0.5rem;">
         <label>{% trans "From:" %}
             <input type="date" id="custom-start-date">
         </label>
@@ -74,22 +70,11 @@
     </div>
 </details>
 
-<details class="device-filter" open>
-    <summary>{% trans "Devices" %}</summary>
-    <div class="filter-actions">
-        <button id="select-all" class="outline">{% trans "Select all" %}</button>
-        <button id="deselect-all" class="outline secondary">{% trans "Deselect all" %}</button>
-    </div>
-    <div class="filter-grid">
-        {% for d in devices %}
-        <label style="display:inline-flex;align-items:center;gap:0.3rem;">
-            <input type="checkbox" class="device-checkbox" value="{{ d.device_id }}" checked>
-            {{ d.effective_name }}
-            <a href="{% url 'devices:history' d.device_id %}" style="font-size:0.8em;" title="{% trans "View history" %}">&#8599;</a>
-        </label>
-        {% endfor %}
-    </div>
-</details>
+<div class="device-links">
+    {% for d in devices %}
+    <a href="{% url 'devices:history' d.device_id %}">{{ d.effective_name }} &#8599;</a>
+    {% endfor %}
+</div>
 
 <details open>
     <summary>{% trans "Device status" %}</summary>
@@ -139,10 +124,34 @@
 
     echarts.connect(allChartInstances);
 
-    function getSelectedDevices() {
-        var selected = [];
-        document.querySelectorAll(".device-checkbox:checked").forEach(function(cb) { selected.push(cb.value); });
-        return selected;
+    function computeYRange(allValues) {
+        if (!allValues.length) return {};
+        var mn = allValues[0], mx = allValues[0];
+        for (var i = 1; i < allValues.length; i++) {
+            if (allValues[i] < mn) mn = allValues[i];
+            if (allValues[i] > mx) mx = allValues[i];
+        }
+        var range = mx - mn || Math.abs(mx) * 0.1 || 1;
+        var margin = range / 8; // 10% of visual at each end ≈ range/(80%)*10% = range/8
+        return { min: Math.floor((mn - margin) * 10) / 10, max: Math.ceil((mx + margin) * 10) / 10 };
+    }
+
+    var allDeviceIds = Object.keys(deviceNames);
+
+    function getThemeColors() {
+        var s = getComputedStyle(document.documentElement);
+        return {
+            text: s.getPropertyValue("--pico-color").trim() || "#888",
+            bg: s.getPropertyValue("--pico-card-background-color").trim() || "#fff",
+            border: s.getPropertyValue("--pico-muted-border-color").trim() || "#ccc"
+        };
+    }
+
+    function themedTooltip(extra) {
+        var tc = getThemeColors();
+        var base = { confine: true, backgroundColor: tc.bg, borderColor: tc.border, textStyle: { color: tc.text } };
+        for (var k in extra) base[k] = extra[k];
+        return base;
     }
 
     function loadTimelines(params, selectedDevices) {
@@ -159,6 +168,7 @@
         chartDom.style.height = totalHeight + "px";
         if (!timelineChart) {
             timelineChart = echarts.init(chartDom);
+            timelineChart.on("globalout", function() { timelineChart.dispatchAction({ type: "hideTip" }); });
         } else {
             timelineChart.resize();
         }
@@ -184,16 +194,17 @@
     function renderTimeline(categories, renderData, totalHeight) {
         if (!timelineChart) return;
         timelineChart.setOption({
-            tooltip: {
+            tooltip: themedTooltip({
                 trigger: "item",
+                enterable: false,
                 formatter: function(p) {
                     var d = p.data;
                     return "<strong>" + categories[d[2]] + "</strong><br>" +
                         d[3].toUpperCase() + (d[4] ? ": " + d[4] : "") + "<br>" +
-                        new Date(d[0]).toLocaleString() + " → " + new Date(d[1]).toLocaleString();
+                        new Date(d[0]).toLocaleString() + " &rarr; " + new Date(d[1]).toLocaleString();
                 }
-            },
-            xAxis: { type: "time", axisPointer: { show: true }, axisLabel: { fontSize: 10 } },
+            }),
+            xAxis: { type: "time", axisLabel: { fontSize: 10 }, axisPointer: { show: true, triggerTooltip: false } },
             yAxis: { type: "category", data: categories, axisLabel: { fontSize: 11 }, inverse: true },
             series: [{
                 type: "custom",
@@ -223,11 +234,10 @@
         } else {
             params = "preset=" + currentPreset;
         }
-        var selectedDevices = getSelectedDevices();
-        loadTimelines(params, selectedDevices);
+        loadTimelines(params, allDeviceIds);
 
         Object.keys(metricsDevices).forEach(function(metric) {
-            var devices = metricsDevices[metric].filter(function(d) { return selectedDevices.indexOf(d) !== -1; });
+            var devices = metricsDevices[metric];
             if (!devices.length || !charts[metric]) { if (charts[metric]) charts[metric].clear(); return; }
 
             fetch("/api/overview-chart/?metric=" + encodeURIComponent(metric) + "&devices=" + encodeURIComponent(devices.join(",")) + "&" + params)
@@ -235,10 +245,12 @@
                 .then(function(data) {
                     if (!charts[metric]) return;
                     var seriesArr = [];
+                    var allValues = [];
                     var deviceKeys = Object.keys(data.series);
                     deviceKeys.forEach(function(did, idx) {
                         var s = data.series[did];
                         var color = CHART_COLORS[idx % CHART_COLORS.length];
+                        for (var i = 0; i < s.values.length; i++) allValues.push(s.values[i]);
                         seriesArr.push({
                             name: deviceNames[did] || did,
                             type: "line", smooth: true, showSymbol: false,
@@ -248,15 +260,17 @@
                             data: s.times.map(function(t, i) { return [t, s.values[i]]; }),
                         });
                     });
+                    var yRange = computeYRange(allValues);
                     var md = metricDisplay[metric] || {};
                     var label = md.label || metric;
                     var unit = data.unit || globalUnits[metric] || md.unit || "";
                     var yName = unit ? label + " (" + unit + ")" : label;
+                    var tc = getThemeColors();
                     charts[metric].setOption({
-                        tooltip: { trigger: "axis", axisPointer: { type: "cross", label: { backgroundColor: "#6a7985" } } },
-                        legend: { show: deviceKeys.length > 1, type: "scroll", bottom: 0, textStyle: { fontSize: 11 } },
+                        tooltip: themedTooltip({ trigger: "axis", axisPointer: { type: "cross", label: { backgroundColor: "#6a7985" } } }),
+                        legend: { show: deviceKeys.length > 1, type: "scroll", bottom: 0, textStyle: { fontSize: 11, color: tc.text } },
                         xAxis: { type: "time", axisPointer: { show: true } },
-                        yAxis: { type: "value", name: yName, nameTextStyle: { fontSize: 11 }, splitLine: { lineStyle: { type: "dashed", opacity: 0.3 } } },
+                        yAxis: { type: "value", name: yName, min: yRange.min, max: yRange.max, nameTextStyle: { fontSize: 11 }, splitLine: { lineStyle: { type: "dashed", opacity: 0.3 } } },
                         grid: { top: 30, bottom: deviceKeys.length > 1 ? 45 : 25, left: 55, right: 15 },
                         series: seriesArr,
                     }, true);
@@ -287,16 +301,6 @@
         }
     });
 
-    document.querySelectorAll(".device-checkbox").forEach(function(cb) { cb.addEventListener("change", loadAllCharts); });
-    document.getElementById("select-all").addEventListener("click", function() {
-        document.querySelectorAll(".device-checkbox").forEach(function(cb) { cb.checked = true; });
-        loadAllCharts();
-    });
-    document.getElementById("deselect-all").addEventListener("click", function() {
-        document.querySelectorAll(".device-checkbox").forEach(function(cb) { cb.checked = false; });
-        loadAllCharts();
-    });
-
     function setupRefresh() {
         if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
         var seconds = parseInt(document.getElementById("refresh-select").value, 10);
@@ -308,6 +312,8 @@
         allChartInstances.forEach(function(c) { c.resize(); });
         if (timelineChart) timelineChart.resize();
     });
+
+    window.addEventListener("themechange", loadAllCharts);
 
     loadAllCharts();
     setupRefresh();

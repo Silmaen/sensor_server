@@ -13,7 +13,11 @@
         <span id="alert-{{ device.device_id }}" class="badge" style="display:none;"></span>
         {% endif %}
     </h4>
-    <small>{{ device.device_type }} &mdash; {% if device.location %}{{ device.location }}{% else %}{% trans "Location not set" %}{% endif %}</small>
+    <small>
+        {{ device.device_type }} &mdash; {% if device.location %}{{ device.location }}{% else %}{% trans "Location not set" %}{% endif %}
+        {% if device.location_type == "indoor" %}<span class="badge badge-indoor">{% trans "Indoor" %}</span>
+        {% elif device.location_type == "outdoor" %}<span class="badge badge-outdoor">{% trans "Outdoor" %}</span>{% endif %}
+    </small>
     <div id="metrics-{{ device.device_id }}" style="margin-top:0.5rem;">
         {% for metric, value in device.latest_metrics.items %}
         <div class="metric-row">

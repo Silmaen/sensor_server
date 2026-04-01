@@ -15,6 +15,14 @@
         <input type="text" name="location" value="{{ device.location }}">
     </label>
     <label>
+        {% trans "Location type" %}
+        <select name="location_type">
+            <option value="">—</option>
+            <option value="indoor" {% if device.location_type == "indoor" %}selected{% endif %}>{% trans "Indoor" %}</option>
+            <option value="outdoor" {% if device.location_type == "outdoor" %}selected{% endif %}>{% trans "Outdoor" %}</option>
+        </select>
+    </label>
+    <label>
         {% trans "Publish interval (seconds)" %}
         <input type="number" name="publish_interval" value="{{ device.publish_interval }}" min="0" max="86400">
         <small>{% trans "0 = unknown (default 5 min timeout). Used to compute online/offline status (3× interval)." %}</small>

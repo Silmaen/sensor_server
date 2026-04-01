@@ -22,10 +22,10 @@
             <td>{{ device.last_seen|date:"Y-m-d H:i"|default:"-" }}</td>
             {% if user|has_role:"admin" %}
             <td>
-                <form hx-post="{% url 'devices:approve' device.device_id %}" hx-target="#device-tables" hx-swap="innerHTML" style="display:inline;">
+                <form hx-post="{% url 'devices:approve' device.device_id %}" hx-target="#device-tables" hx-swap="innerHTML" style="margin:0;">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="approve">
-                    <button type="submit" class="outline">{% trans "Approve" %}</button>
+                    <button type="submit" class="outline btn-sm">{% trans "Approve" %}</button>
                 </form>
             </td>
             {% endif %}
@@ -45,6 +45,7 @@
             <th>{% trans "Device" %}</th>
             <th>{% trans "Type" %}</th>
             <th>{% trans "Location" %}</th>
+            <th></th>
             <th>{% trans "Status" %}</th>
             <th>{% trans "Last seen" %}</th>
             {% if user|has_role:"admin" %}
@@ -59,6 +60,10 @@
             <td>{{ device.device_type }}</td>
             <td>{{ device.location|default:"-" }}</td>
             <td>
+                {% if device.location_type == "indoor" %}<span class="badge badge-indoor">{% trans "Indoor" %}</span>
+                {% elif device.location_type == "outdoor" %}<span class="badge badge-outdoor">{% trans "Outdoor" %}</span>{% else %}-{% endif %}
+            </td>
+            <td>
                 <span class="badge {% if device.is_online %}badge-online{% else %}badge-offline{% endif %}">
                     {% if device.is_online %}{% trans "online" %}{% else %}{% trans "offline" %}{% endif %}
                 </span>
@@ -71,10 +76,10 @@
             <td>{{ device.last_seen|date:"Y-m-d H:i"|default:"-" }}</td>
             {% if user|has_role:"admin" %}
             <td>
-                <form hx-post="{% url 'devices:approve' device.device_id %}" hx-target="#device-tables" hx-swap="innerHTML" style="display:inline;">
+                <form hx-post="{% url 'devices:approve' device.device_id %}" hx-target="#device-tables" hx-swap="innerHTML" style="margin:0;">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="revoke">
-                    <button type="submit" class="outline secondary">{% trans "Revoke" %}</button>
+                    <button type="submit" class="outline secondary btn-sm">{% trans "Revoke" %}</button>
                 </form>
             </td>
             {% endif %}

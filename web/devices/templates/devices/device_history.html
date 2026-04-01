@@ -24,26 +24,23 @@
 {% endblock %}
 
 {% block content %}
-<div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-    {% if prev_device_id %}
-    <a href="{% url 'devices:history' prev_device_id %}" role="button" class="outline" style="margin:0;padding:0.25em 0.6em;">&laquo; {% trans "Previous" %}</a>
-    {% endif %}
-    <hgroup style="flex:1;min-width:0;">
-    <h2 style="margin:0;">{{ device.effective_name }}</h2>
-    <p style="margin:0;">
-        {{ device.device_type }} &mdash; {% if device.location %}{{ device.location }}{% else %}{% trans "Location not set" %}{% endif %}
-        <span class="badge {% if device.is_online %}badge-online{% else %}badge-offline{% endif %}">
-            {% if device.is_online %}{% trans "online" %}{% else %}{% trans "offline" %}{% endif %}
-        </span>
-        {% if is_admin %}
-            <a href="{% url 'devices:admin' device.device_id %}" role="button" class="outline" style="margin-left:0.5rem;">{% trans "Administration" %}</a>
-        {% endif %}
-    </p>
-    </hgroup>
-    {% if next_device_id %}
-    <a href="{% url 'devices:history' next_device_id %}" role="button" class="outline" style="margin:0;padding:0.25em 0.6em;">{% trans "Next" %} &raquo;</a>
-    {% endif %}
+<div style="display:flex; align-items:baseline; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;">
+    <h2 style="margin:0; flex:1; min-width:0;">{{ device.effective_name }}</h2>
+    <span class="nav-btns">
+        <a href="{% url 'devices:history' prev_device_id %}" role="button" class="outline" title="{% trans "Previous" %}">&lsaquo;</a>
+        <a href="{% url 'devices:list' %}" role="button" class="outline" title="{% trans "Devices" %}">&#8801;</a>
+        <a href="{% url 'devices:history' next_device_id %}" role="button" class="outline" title="{% trans "Next" %}">&rsaquo;</a>
+    </span>
 </div>
+<p style="margin-top:0;">
+    {{ device.device_type }} &mdash; {% if device.location %}{{ device.location }}{% else %}{% trans "Location not set" %}{% endif %}
+    <span class="badge {% if device.is_online %}badge-online{% else %}badge-offline{% endif %}">
+        {% if device.is_online %}{% trans "online" %}{% else %}{% trans "offline" %}{% endif %}
+    </span>
+    {% if is_admin %}
+        <a href="{% url 'devices:admin' device.device_id %}" class="btn-sm outline" role="button">{% trans "Administration" %}</a>
+    {% endif %}
+</p>
 
 {% if device.alert_level %}
 <p class="alert-{{ device.alert_level }}">
@@ -51,33 +48,32 @@
 </p>
 {% endif %}
 
-<div class="toolbar">
-    <div class="presets">
-        <button class="preset-btn outline" data-preset="1h">{% trans "1 hour" %}</button>
-        <button class="preset-btn outline" data-preset="6h">{% trans "6 hours" %}</button>
-        <button class="preset-btn outline active" data-preset="1d">{% trans "1 day" %}</button>
-        <button class="preset-btn outline" data-preset="7d">{% trans "7 days" %}</button>
-        <button class="preset-btn outline" data-preset="1m">{% trans "1 month" %}</button>
-        <button class="preset-btn outline" data-preset="2m">{% trans "2 months" %}</button>
-        <button class="preset-btn outline" data-preset="3m">{% trans "3 months" %}</button>
-        <button class="preset-btn outline" data-preset="1y">{% trans "1 year" %}</button>
+<details class="custom-range" open>
+    <summary>{% trans "Time range" %}</summary>
+    <div class="toolbar">
+        <div class="presets">
+            <button class="preset-btn outline" data-preset="1h">{% trans "1 hour" %}</button>
+            <button class="preset-btn outline" data-preset="6h">{% trans "6 hours" %}</button>
+            <button class="preset-btn outline active" data-preset="1d">{% trans "1 day" %}</button>
+            <button class="preset-btn outline" data-preset="7d">{% trans "7 days" %}</button>
+            <button class="preset-btn outline" data-preset="1m">{% trans "1 month" %}</button>
+            <button class="preset-btn outline" data-preset="2m">{% trans "2 months" %}</button>
+            <button class="preset-btn outline" data-preset="3m">{% trans "3 months" %}</button>
+            <button class="preset-btn outline" data-preset="1y">{% trans "1 year" %}</button>
+        </div>
+        <div class="refresh-group">
+            <small>{% trans "Refresh:" %}</small>
+            <select id="refresh-select">
+                <option value="0">{% trans "Off" %}</option>
+                <option value="10">10s</option>
+                <option value="30">30s</option>
+                <option value="60" selected>1m</option>
+                <option value="300">5m</option>
+                <option value="900">15m</option>
+            </select>
+        </div>
     </div>
-    <div class="refresh-group">
-        <small>{% trans "Refresh:" %}</small>
-        <select id="refresh-select">
-            <option value="0">{% trans "Off" %}</option>
-            <option value="10">10s</option>
-            <option value="30">30s</option>
-            <option value="60" selected>1m</option>
-            <option value="300">5m</option>
-            <option value="900">15m</option>
-        </select>
-    </div>
-</div>
-
-<details class="custom-range">
-    <summary>{% trans "Custom range" %}</summary>
-    <div class="grid">
+    <div class="grid" style="margin-top:0.5rem;">
         <label>{% trans "From:" %}
             <input type="date" id="custom-start-date">
         </label>
@@ -156,6 +152,35 @@
         "#ea7ccc", "#48b8d0", "#ff9f7f", "#87cefa"
     ];
     var STATUS_COLORS = {"ok": "#2ecc40", "warning": "#e67e22", "error": "#e74c3c"};
+
+    function getThemeColors() {
+        var s = getComputedStyle(document.documentElement);
+        return {
+            text: s.getPropertyValue("--pico-color").trim() || "#888",
+            bg: s.getPropertyValue("--pico-card-background-color").trim() || "#fff",
+            border: s.getPropertyValue("--pico-muted-border-color").trim() || "#ccc"
+        };
+    }
+
+    function themedTooltip(extra) {
+        var tc = getThemeColors();
+        var base = { confine: true, backgroundColor: tc.bg, borderColor: tc.border, textStyle: { color: tc.text } };
+        for (var k in extra) base[k] = extra[k];
+        return base;
+    }
+
+    function computeYRange(allValues) {
+        if (!allValues.length) return {};
+        var mn = allValues[0], mx = allValues[0];
+        for (var i = 1; i < allValues.length; i++) {
+            if (allValues[i] < mn) mn = allValues[i];
+            if (allValues[i] > mx) mx = allValues[i];
+        }
+        var range = mx - mn || Math.abs(mx) * 0.1 || 1;
+        var margin = range / 8;
+        return { min: Math.floor((mn - margin) * 10) / 10, max: Math.ceil((mx + margin) * 10) / 10 };
+    }
+
     var charts = {};
     var allChartInstances = [];
     var currentPreset = "1d";
@@ -165,6 +190,7 @@
 
     var statusChart = echarts.init(document.getElementById("chart-status-timeline"));
     allChartInstances.push(statusChart);
+    statusChart.on("globalout", function() { statusChart.dispatchAction({ type: "hideTip" }); });
 
     metrics.forEach(function(metric) {
         var dom = document.getElementById("chart-" + metric);
@@ -187,14 +213,15 @@
                     renderData.push([new Date(seg.start).getTime(), new Date(seg.end).getTime(), seg.level, seg.message || "", color]);
                 });
                 statusChart.setOption({
-                    tooltip: {
+                    tooltip: themedTooltip({
                         trigger: "item",
+                        enterable: false,
                         formatter: function(p) {
                             var d = p.data;
-                            return d[2].toUpperCase() + (d[3] ? ": " + d[3] : "") + "<br>" + new Date(d[0]).toLocaleString() + " → " + new Date(d[1]).toLocaleString();
+                            return d[2].toUpperCase() + (d[3] ? ": " + d[3] : "") + "<br>" + new Date(d[0]).toLocaleString() + " &rarr; " + new Date(d[1]).toLocaleString();
                         }
-                    },
-                    xAxis: { type: "time", axisLabel: { fontSize: 10 }, axisPointer: { show: true } },
+                    }),
+                    xAxis: { type: "time", axisLabel: { fontSize: 10 }, axisPointer: { show: true, triggerTooltip: false } },
                     yAxis: { show: false, max: 1 },
                     series: [{
                         type: "custom",
@@ -227,15 +254,16 @@
                 .then(function(data) {
                     if (!charts[metric]) return;
                     var md = metricDisplay[metric] || {};
-                    var label = md.label || metric;
+                    var mLabel = md.label || metric;
                     var unit = data.unit || units[metric] || md.unit || "";
-                    var yName = unit ? label + " (" + unit + ")" : label;
-                    var label = document.getElementById("unit-label-" + metric);
-                    if (label && unit) label.textContent = " (" + unit + ")";
+                    var yName = unit ? mLabel + " (" + unit + ")" : mLabel;
+                    var unitEl = document.getElementById("unit-label-" + metric);
+                    if (unitEl && unit) unitEl.textContent = " (" + unit + ")";
+                    var yRange = computeYRange(data.values);
                     charts[metric].setOption({
-                        tooltip: { trigger: "axis", axisPointer: { type: "cross", label: { backgroundColor: "#6a7985" } } },
+                        tooltip: themedTooltip({ trigger: "axis", axisPointer: { type: "cross", label: { backgroundColor: "#6a7985" } } }),
                         xAxis: { type: "time", axisPointer: { show: true } },
-                        yAxis: { type: "value", name: yName, nameTextStyle: { fontSize: 11 }, splitLine: { lineStyle: { type: "dashed", opacity: 0.3 } } },
+                        yAxis: { type: "value", name: yName, min: yRange.min, max: yRange.max, nameTextStyle: { fontSize: 11 }, splitLine: { lineStyle: { type: "dashed", opacity: 0.3 } } },
                         grid: { top: 30, bottom: 25, left: 55, right: 15 },
                         series: [{
                             name: metric,
@@ -285,6 +313,8 @@
     window.addEventListener("resize", function() {
         allChartInstances.forEach(function(c) { c.resize(); });
     });
+
+    window.addEventListener("themechange", loadAllCharts);
 
     loadAllCharts();
     setupRefresh();

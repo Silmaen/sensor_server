@@ -1,6 +1,6 @@
 {% load i18n static %}
 <!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}">
+<html lang="{{ LANGUAGE_CODE }}" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,19 +10,21 @@
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <script src="https://unpkg.com/htmx-ext-ws@2.0.2/ws.js"></script>
     <style>
-        :root, [data-theme="light"] {
+        :root:not([data-theme="dark"]), [data-theme="light"] {
             --pico-font-size: 16px;
-            --pico-primary: #e67e22;
-            --pico-primary-hover: #d35400;
-            --pico-primary-focus: rgba(230, 126, 34, 0.25);
+            --pico-primary: #c05600;
+            --pico-primary-hover: #a04800;
+            --pico-primary-focus: rgba(192, 86, 0, 0.25);
             --pico-primary-inverse: #fff;
             --pico-primary-background: #e67e22;
             --pico-primary-hover-background: #d35400;
             --pico-primary-border: #e67e22;
             --pico-primary-hover-border: #d35400;
             --pico-primary-underline: rgba(230, 126, 34, 0.5);
+            --pico-primary-hover-underline: rgba(211, 84, 0, 0.5);
         }
-        [data-theme="dark"], :root:not([data-theme="light"]) {
+        [data-theme="dark"] {
+            --pico-font-size: 16px;
             --pico-primary: #e67e22;
             --pico-primary-hover: #f39c12;
             --pico-primary-focus: rgba(230, 126, 34, 0.25);
@@ -32,14 +34,20 @@
             --pico-primary-border: #e67e22;
             --pico-primary-hover-border: #f39c12;
             --pico-primary-underline: rgba(230, 126, 34, 0.5);
+            --pico-primary-hover-underline: rgba(243, 156, 18, 0.5);
         }
-        .badge { display: inline-block; padding: 0.15em 0.5em; border-radius: 4px; font-size: 0.8em; font-weight: 600; }
+        .badge { display: inline-block; padding: 0.15em 0.5em; border-radius: 4px; font-size: 0.8em; font-weight: 600; vertical-align: middle; }
+        .btn-sm { margin: 0; padding: 0.2em 0.5em; font-size: 0.85em; }
+        .nav-btns { display: inline-flex; align-items: center; gap: 0.25rem; vertical-align: middle; }
+        .nav-btns a { margin: 0; padding: 0.2em 0.5em; font-size: 0.85em; }
         .badge-online { background: #2ecc40; color: #fff; }
         .badge-offline { background: #aaa; color: #fff; }
         .badge-pending { background: #e67e22; color: #fff; }
         .badge-guest { background: #f39c12; color: #111; }
         .badge-resident { background: #e67e22; color: #fff; }
         .badge-admin { background: #d35400; color: #fff; }
+        .badge-indoor { background: #3498db; color: #fff; }
+        .badge-outdoor { background: #27ae60; color: #fff; }
         .device-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
         .device-card { border: 1px solid var(--pico-muted-border-color); border-radius: 8px; padding: 1rem; background: var(--pico-card-background-color); }
         .device-card h4 { margin-bottom: 0.3rem; }
@@ -61,7 +69,14 @@
             nav > ul:first-child { flex: 1; }
         }
         .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .theme-toggle { background: none; border: none; cursor: pointer; font-size: 1.2rem; padding: 0.2em 0.4em; margin: 0; }
     </style>
+    <script>
+        (function() {
+            var t = localStorage.getItem("theme") || "light";
+            document.documentElement.setAttribute("data-theme", t);
+        })();
+    </script>
     {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -104,6 +119,9 @@
                 <li><a href="{{ LOGIN_URL }}">{% trans "Log in" %}</a></li>
             {% endif %}
             <li>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme"></button>
+            </li>
+            <li>
                 <form method="post" action="{% url 'set_language' %}" class="lang-select">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.path }}">
@@ -120,5 +138,22 @@
         {% block content %}{% endblock %}
     </main>
     {% block extra_scripts %}{% endblock %}
+    <script>
+    (function() {
+        var btn = document.getElementById("theme-toggle");
+        function update() {
+            var t = document.documentElement.getAttribute("data-theme");
+            btn.textContent = t === "dark" ? "\u2600\uFE0F" : "\uD83C\uDF19";
+        }
+        btn.addEventListener("click", function() {
+            var next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+            document.documentElement.setAttribute("data-theme", next);
+            localStorage.setItem("theme", next);
+            update();
+            window.dispatchEvent(new Event("themechange"));
+        });
+        update();
+    })();
+    </script>
 </body>
 </html>

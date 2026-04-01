@@ -327,6 +327,9 @@ msgstr "Mesures visibles par les invités :"
 msgid "No metrics available for this device."
 msgstr "Aucune mesure disponible pour cet appareil."
 
+msgid "Time range"
+msgstr "Plage temporelle"
+
 msgid "Custom range"
 msgstr "Plage personnalisée"
 
@@ -525,6 +528,18 @@ msgstr "Précédent"
 
 msgid "Next"
 msgstr "Suivant"
+
+msgid "Indoor"
+msgstr "Intérieur"
+
+msgid "Outdoor"
+msgstr "Extérieur"
+
+msgid "Location type"
+msgstr "Type d'emplacement"
+
+msgid "Averages"
+msgstr "Moyennes"
 
 msgid "Danger zone"
 msgstr "Zone de danger"

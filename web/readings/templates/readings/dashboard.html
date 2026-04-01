@@ -7,6 +7,9 @@
     .dashboard-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
     .dashboard-toolbar .refresh-group { display: flex; align-items: center; gap: 0.3rem; margin-left: auto; }
     .dashboard-toolbar .refresh-group select { margin: 0; padding: 0.25em 0.4em; font-size: 0.85em; width: auto; }
+    .averages-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+    .averages-card { border: 1px solid var(--pico-muted-border-color); border-radius: 8px; padding: 0.75rem 1rem; background: var(--pico-card-background-color); }
+    .averages-card h4 { margin-bottom: 0.5rem; }
 </style>
 {% endblock %}
 
@@ -27,7 +30,7 @@
         </div>
     </div>
 
-    <div class="device-grid" id="device-grid">
+    <div id="device-grid">
         {% include "readings/_dashboard_cards.html" %}
     </div>
 </div>

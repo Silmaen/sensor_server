@@ -20,6 +20,19 @@ SAFE_IDENTIFIER_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 logger = logging.getLogger(__name__)
 
 
+def _prev_next_device(device_id):
+    """Return (prev_id, next_id) wrapping around the approved device list."""
+    ids = list(
+        Device.objects.filter(is_approved=True)
+        .order_by("device_id")
+        .values_list("device_id", flat=True)
+    )
+    if not ids or device_id not in ids:
+        return None, None
+    idx = ids.index(device_id)
+    return ids[idx - 1], ids[(idx + 1) % len(ids)]
+
+
 def _get_device_metrics(device):
     """Return sorted list of distinct metrics for a device."""
     metrics = list(
@@ -69,18 +82,7 @@ def device_history_view(request, device_id):
         if m in metrics_display and u:
             metrics_display[m]["unit"] = u
 
-    # Compute prev/next devices for navigation
-    approved_ids = list(
-        Device.objects.filter(is_approved=True)
-        .order_by("device_id")
-        .values_list("device_id", flat=True)
-    )
-    try:
-        idx = approved_ids.index(device_id)
-    except ValueError:
-        idx = -1
-    prev_device_id = approved_ids[idx - 1] if idx > 0 else None
-    next_device_id = approved_ids[idx + 1] if 0 <= idx < len(approved_ids) - 1 else None
+    prev_id, next_id = _prev_next_device(device_id)
 
     return render(request, "devices/device_history.html", {
         "device": device,
@@ -89,8 +91,8 @@ def device_history_view(request, device_id):
         "units_json": json.dumps(units),
         "metrics_display_json": json.dumps(metrics_display),
         "is_admin": is_admin,
-        "prev_device_id": prev_device_id,
-        "next_device_id": next_device_id,
+        "prev_device_id": prev_id,
+        "next_device_id": next_id,
     })
 
 
@@ -99,10 +101,15 @@ def device_admin_view(request, device_id):
     device = get_object_or_404(Device, device_id=device_id)
     commands = device.commands.select_related("sent_by")[:20]
     command_params = (device.capabilities or {}).get("command_params", {})
+
+    prev_id, next_id = _prev_next_device(device_id)
+
     return render(request, "devices/device_admin.html", {
         "device": device,
         "commands": commands,
         "command_params_json": json.dumps(command_params),
+        "prev_device_id": prev_id,
+        "next_device_id": next_id,
     })
 
 
@@ -114,13 +121,14 @@ def device_edit_view(request, device_id):
     if request.method == "POST":
         device.display_name = request.POST.get("display_name", "")
         device.location = request.POST.get("location", "")
+        device.location_type = request.POST.get("location_type", "")
         device.guest_visible_metrics = request.POST.getlist("guest_visible_metrics")
         try:
             interval = int(request.POST.get("publish_interval", 0))
             device.publish_interval = max(0, min(interval, 86400))
         except (ValueError, TypeError):
             pass
-        device.save(update_fields=["display_name", "location", "guest_visible_metrics", "publish_interval"])
+        device.save(update_fields=["display_name", "location", "location_type", "guest_visible_metrics", "publish_interval"])
         if request.headers.get("HX-Request"):
             return render(request, "devices/_device_card.html", {"device": device})
         return redirect("devices:admin", device_id=device.device_id)

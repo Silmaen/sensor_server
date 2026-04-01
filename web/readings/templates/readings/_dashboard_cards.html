@@ -1,6 +1,26 @@
 {% load i18n device_tags %}
-{% for device in devices %}
-    {% include "devices/_device_card.html" with device=device %}
-{% empty %}
-    <p>{% trans "No devices detected. Devices will appear automatically when they publish to MQTT." %}</p>
-{% endfor %}
+{% if averages %}
+<div class="averages-grid">
+    {% for group, metrics in averages.items %}
+    <div class="averages-card">
+        <h4>
+            {% if group == "indoor" %}<span class="badge badge-indoor">{% trans "Indoor" %}</span>
+            {% else %}<span class="badge badge-outdoor">{% trans "Outdoor" %}</span>{% endif %}
+            {% trans "Averages" %}
+        </h4>
+        {% for metric, value in metrics.items %}
+        <div class="metric-row">
+            <strong>{{ metric|metric_label }}:</strong> {{ value }} <small>{{ metric|metric_unit }}</small>
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+<div class="device-grid">
+    {% for device in devices %}
+        {% include "devices/_device_card.html" with device=device %}
+    {% empty %}
+        <p>{% trans "No devices detected. Devices will appear automatically when they publish to MQTT." %}</p>
+    {% endfor %}
+</div>

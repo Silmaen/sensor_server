@@ -3,23 +3,30 @@
 {% block title %}{% trans "Administration" %} — {{ device.effective_name }}{% endblock %}
 
 {% block content %}
-<hgroup>
-    <h2>{{ device.effective_name }}</h2>
-    <p>
-        {{ device.device_type }} &mdash; {% if device.location %}{{ device.location }}{% else %}{% trans "Location not set" %}{% endif %}
-        <span class="badge {% if device.is_online %}badge-online{% else %}badge-offline{% endif %}">
-            {% if device.is_online %}{% trans "online" %}{% else %}{% trans "offline" %}{% endif %}
-        </span>
-        {% if device.is_approved %}
-            <span class="badge badge-online">{% trans "approved" %}</span>
-        {% else %}
-            <span class="badge badge-offline">{% trans "pending approval" %}</span>
-        {% endif %}
-        <a href="{% url 'devices:edit' device.device_id %}" role="button" class="outline" style="margin-left:0.5rem;">{% trans "Edit" %}</a>
-        <a href="{% url 'devices:rename' device.device_id %}" role="button" class="outline">{% trans "Rename" %}</a>
-        <a href="{% url 'devices:history' device.device_id %}" role="button" class="outline">{% trans "View history" %}</a>
-    </p>
-</hgroup>
+<div style="display:flex; align-items:baseline; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;">
+    <h2 style="margin:0; flex:1; min-width:0;">{{ device.effective_name }}</h2>
+    <span class="nav-btns">
+        <a href="{% url 'devices:admin' prev_device_id %}" role="button" class="outline" title="{% trans "Previous" %}">&lsaquo;</a>
+        <a href="{% url 'devices:list' %}" role="button" class="outline" title="{% trans "Devices" %}">&#8801;</a>
+        <a href="{% url 'devices:admin' next_device_id %}" role="button" class="outline" title="{% trans "Next" %}">&rsaquo;</a>
+    </span>
+</div>
+<p style="margin-top:0;">
+    {{ device.device_type }} &mdash; {% if device.location %}{{ device.location }}{% else %}{% trans "Location not set" %}{% endif %}
+    {% if device.location_type == "indoor" %}<span class="badge badge-indoor">{% trans "Indoor" %}</span>
+    {% elif device.location_type == "outdoor" %}<span class="badge badge-outdoor">{% trans "Outdoor" %}</span>{% endif %}
+    <span class="badge {% if device.is_online %}badge-online{% else %}badge-offline{% endif %}">
+        {% if device.is_online %}{% trans "online" %}{% else %}{% trans "offline" %}{% endif %}
+    </span>
+    {% if device.is_approved %}
+        <span class="badge badge-online">{% trans "approved" %}</span>
+    {% else %}
+        <span class="badge badge-offline">{% trans "pending approval" %}</span>
+    {% endif %}
+    <a href="{% url 'devices:edit' device.device_id %}" role="button" class="outline btn-sm">{% trans "Edit" %}</a>
+    <a href="{% url 'devices:rename' device.device_id %}" role="button" class="outline btn-sm">{% trans "Rename" %}</a>
+    <a href="{% url 'devices:history' device.device_id %}" role="button" class="outline btn-sm">{% trans "History" %}</a>
+</p>
 
 {% if device.alert_level %}
 <p class="alert-{{ device.alert_level }}">
