@@ -403,6 +403,21 @@ def handle_ack_message(device_type: str, device_id: str, payload: bytes):
     action = data.get("action", "")
     status = data.get("status", "")
 
+    # Calibration response: {"temp": ..., "humi": ..., "press": ...}
+    # Sent by the device in response to request_calibration, without action/status.
+    if not action and "temp" in data:
+        calibration = {}
+        for key in ("temp", "humi", "press"):
+            if key in data and isinstance(data[key], (int, float)):
+                calibration[key] = round(float(data[key]), 2)
+        if calibration:
+            config = device.config or {}
+            config["calibration"] = calibration
+            device.config = config
+            device.save(update_fields=["config"])
+            logger.info("ack %s/%s -> stored calibration offsets: %s", device_type, device_id, calibration)
+        return
+
     if not action or status not in ("ok", "error"):
         logger.warning("ack %s/%s -> rejected (invalid format: action=%s status=%s)", device_type, device_id, action, status)
         return

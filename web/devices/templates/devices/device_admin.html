@@ -93,6 +93,10 @@
         {% endfor %}
     </p>
     {% endif %}
+    <form hx-post="{% url 'devices:request_capabilities' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="outline btn-sm">{% trans "Request capabilities" %}</button>
+    </form>
 </details>
 {% endif %}
 
@@ -116,28 +120,21 @@
         <span id="calib-status-{{ m.key }}"></span>
     </div>
     {% endfor %}
+    <form id="request-calib-form" hx-post="{% url 'devices:command' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML" style="margin:0.5rem 0 0;">
+        {% csrf_token %}
+        <input type="hidden" name="command" value='{"action":"request_calibration"}'>
+        <button type="submit" class="outline btn-sm">{% trans "Request current offsets" %}</button>
+    </form>
 </details>
 {% endif %}
 
-<div class="grid">
-    {% if not device.is_approved %}
-    <form hx-post="{% url 'devices:approve' device.device_id %}" hx-swap="none">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="approve">
-        <button type="submit">{% trans "Approve device" %}</button>
-    </form>
-    {% else %}
-    <form hx-post="{% url 'devices:approve' device.device_id %}" hx-swap="none">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="revoke">
-        <button type="submit" class="secondary">{% trans "Revoke approval" %}</button>
-    </form>
-    {% endif %}
-    <form hx-post="{% url 'devices:request_capabilities' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML">
-        {% csrf_token %}
-        <button type="submit" class="outline">{% trans "Request capabilities" %}</button>
-    </form>
-</div>
+{% if not device.is_approved %}
+<form hx-post="{% url 'devices:approve' device.device_id %}" hx-swap="none">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="approve">
+    <button type="submit">{% trans "Approve device" %}</button>
+</form>
+{% endif %}
 
 <h3>{% trans "Send command" %}</h3>
 <form id="command-form" hx-post="{% url 'devices:command' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML">
@@ -173,6 +170,13 @@
 <hr>
 <details>
     <summary>{% trans "Danger zone" %}</summary>
+    {% if device.is_approved %}
+    <form hx-post="{% url 'devices:approve' device.device_id %}" hx-swap="none" style="margin-bottom:0.5rem;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="revoke">
+        <button type="submit" class="secondary">{% trans "Revoke approval" %}</button>
+    </form>
+    {% endif %}
     <a href="{% url 'devices:delete' device.device_id %}" role="button" class="contrast">{% trans "Delete device" %}</a>
 </details>
 {% endblock %}

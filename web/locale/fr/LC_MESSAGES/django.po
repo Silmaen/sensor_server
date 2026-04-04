@@ -547,6 +547,9 @@ msgstr "Calibration"
 msgid "Adjust sensor offsets. The value is added to the raw reading."
 msgstr "Ajuster les offsets des capteurs. La valeur est ajoutée à la mesure brute."
 
+msgid "Request current offsets"
+msgstr "Demander les offsets actuels"
+
 msgid "Invalid metric."
 msgstr "Métrique invalide."
 
