@@ -541,5 +541,17 @@ msgstr "Type d'emplacement"
 msgid "Averages"
 msgstr "Moyennes"
 
+msgid "Calibration"
+msgstr "Calibration"
+
+msgid "Adjust sensor offsets. The value is added to the raw reading."
+msgstr "Ajuster les offsets des capteurs. La valeur est ajoutée à la mesure brute."
+
+msgid "Invalid metric."
+msgstr "Métrique invalide."
+
+msgid "Invalid value."
+msgstr "Valeur invalide."
+
 msgid "Danger zone"
 msgstr "Zone de danger"

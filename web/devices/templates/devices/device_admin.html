@@ -96,6 +96,29 @@
 </details>
 {% endif %}
 
+{% if has_calibration %}
+<details open>
+    <summary>{% trans "Calibration" %}</summary>
+    <p><small>{% trans "Adjust sensor offsets. The value is added to the raw reading." %}</small></p>
+    {% for m in calibration_metrics %}
+    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+        <strong style="min-width:8em;">{{ m.label }}</strong>
+        <form hx-post="{% url 'devices:calibration' device.device_id %}"
+              hx-target="#calib-status-{{ m.key }}" hx-swap="innerHTML"
+              style="display:inline-flex; align-items:center; gap:0.3rem; margin:0;">
+            {% csrf_token %}
+            <input type="hidden" name="metric" value="{{ m.key }}">
+            <input type="number" name="value" value="{{ m.offset }}" step="0.01"
+                   style="width:6em; margin:0; padding:0.2em 0.4em; font-size:0.9em;">
+            <small>{{ m.unit }}</small>
+            <button type="submit" class="outline btn-sm">{% trans "Apply" %}</button>
+        </form>
+        <span id="calib-status-{{ m.key }}"></span>
+    </div>
+    {% endfor %}
+</details>
+{% endif %}
+
 <div class="grid">
     {% if not device.is_approved %}
     <form hx-post="{% url 'devices:approve' device.device_id %}" hx-swap="none">

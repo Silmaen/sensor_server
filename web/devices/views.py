@@ -96,13 +96,26 @@ def device_history_view(request, device_id):
     })
 
 
+CALIBRATION_METRICS = [
+    ("temp", _("Temperature"), "°C"),
+    ("humi", _("Humidity"), "%"),
+    ("press", _("Pressure"), "hPa"),
+]
+
+
 @role_required("admin")
 def device_admin_view(request, device_id):
     device = get_object_or_404(Device, device_id=device_id)
     commands = device.commands.select_related("sent_by")[:20]
     command_params = (device.capabilities or {}).get("command_params", {})
-
     prev_id, next_id = _prev_next_device(device_id)
+
+    has_calibration = "set_offset" in (device.capabilities or {}).get("commands", [])
+    calibration = device.config.get("calibration", {}) if has_calibration else {}
+    calibration_metrics = [
+        {"key": key, "label": str(label), "unit": unit, "offset": calibration.get(key, 0.0)}
+        for key, label, unit in CALIBRATION_METRICS
+    ] if has_calibration else []
 
     return render(request, "devices/device_admin.html", {
         "device": device,
@@ -110,6 +123,8 @@ def device_admin_view(request, device_id):
         "command_params_json": json.dumps(command_params),
         "prev_device_id": prev_id,
         "next_device_id": next_id,
+        "has_calibration": has_calibration,
+        "calibration_metrics": calibration_metrics,
     })
 
 
@@ -137,6 +152,51 @@ def device_edit_view(request, device_id):
         "device": device,
         "metrics": metrics,
     })
+
+
+@role_required("admin")
+def device_calibration_view(request, device_id):
+    """Set a calibration offset for a specific metric."""
+    device = get_object_or_404(Device, device_id=device_id)
+    if request.method != "POST":
+        return HttpResponseBadRequest()
+
+    metric = request.POST.get("metric", "").strip()
+    valid_keys = [k for k, _, _ in CALIBRATION_METRICS]
+    if metric not in valid_keys:
+        return HttpResponseBadRequest(_("Invalid metric."))
+
+    try:
+        value = float(request.POST.get("value", "0"))
+    except (ValueError, TypeError):
+        return HttpResponseBadRequest(_("Invalid value."))
+
+    # Send set_offset command to device
+    command_data = {"action": "set_offset", "metric": metric, "value": round(value, 2)}
+    topic = f"{device.device_type}/{device.device_id}/command"
+    try:
+        _mqtt_publish(topic, json.dumps(command_data), retain=True)
+    except Exception:
+        logger.exception("Failed to publish calibration command to %s", topic)
+        return HttpResponseBadRequest(_("MQTT publish error."))
+
+    CommandLog.objects.create(device=device, command=command_data, sent_by=request.user)
+
+    # Store offset server-side in device.config
+    config = device.config or {}
+    calibration = config.get("calibration", {})
+    calibration[metric] = round(value, 2)
+    config["calibration"] = calibration
+    device.config = config
+    device.save(update_fields=["config"])
+
+    if request.headers.get("HX-Request"):
+        return render(request, "devices/_calibration_status.html", {
+            "metric": metric,
+            "value": round(value, 2),
+        })
+
+    return redirect("devices:admin", device_id=device.device_id)
 
 
 @role_required("resident")

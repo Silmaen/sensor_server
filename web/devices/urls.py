@@ -10,6 +10,7 @@ urlpatterns = [
     path("<str:device_id>/admin/", views.device_admin_view, name="admin"),
     path("<str:device_id>/edit/", views.device_edit_view, name="edit"),
     path("<str:device_id>/command/", views.device_command_view, name="command"),
+    path("<str:device_id>/calibration/", views.device_calibration_view, name="calibration"),
     path("<str:device_id>/approve/", views.device_approve_view, name="approve"),
     path("<str:device_id>/request-capabilities/", views.device_request_capabilities_view, name="request_capabilities"),
     path("<str:device_id>/delete-command/<int:command_id>/", views.device_delete_command_view, name="delete_command"),
