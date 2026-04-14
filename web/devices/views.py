@@ -143,7 +143,12 @@ def device_edit_view(request, device_id):
             device.publish_interval = max(0, min(interval, 86400))
         except (ValueError, TypeError):
             pass
-        device.save(update_fields=["display_name", "location", "location_type", "guest_visible_metrics", "publish_interval"])
+        try:
+            cell_count = int(request.POST.get("battery_cell_count", 1))
+            device.battery_cell_count = max(1, min(cell_count, 10))
+        except (ValueError, TypeError):
+            pass
+        device.save(update_fields=["display_name", "location", "location_type", "guest_visible_metrics", "publish_interval", "battery_cell_count"])
         if request.headers.get("HX-Request"):
             return render(request, "devices/_device_card.html", {"device": device})
         return redirect("devices:admin", device_id=device.device_id)
@@ -417,6 +422,7 @@ def _rename_device(device, new_id):
             alert_message=device.alert_message,
             capabilities_requested_at=device.capabilities_requested_at,
             guest_visible_metrics=device.guest_visible_metrics,
+            battery_cell_count=device.battery_cell_count,
         )
         new_device = Device.objects.get(device_id=new_id)
         # Re-point FK relations

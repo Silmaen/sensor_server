@@ -108,11 +108,12 @@ def _annotate_devices_with_metrics(devices, guest_only):
         all_metrics = latest_readings.get(device.device_id, {})
         if guest_only:
             visible = device.guest_visible_metrics or []
-            device.latest_metrics = {
-                k: v for k, v in all_metrics.items() if k in visible
-            }
-        else:
-            device.latest_metrics = all_metrics
+            all_metrics = {k: v for k, v in all_metrics.items() if k in visible}
+        # Divide bat_voltage by cell count for per-cell display
+        cell_count = device.battery_cell_count or 1
+        if cell_count > 1 and "bat_voltage" in all_metrics:
+            all_metrics["bat_voltage"] = round(all_metrics["bat_voltage"] / cell_count, 2)
+        device.latest_metrics = all_metrics
         device.visible_metrics_csv = ",".join(device.latest_metrics.keys())
 
 
@@ -150,10 +151,15 @@ def dashboard_view(request):
         all_metrics.update(d.latest_metrics.keys())
     metrics_display = get_metrics_display_map(all_metrics)
     averages = _compute_averages(devices)
+    cell_counts = {
+        d.device_id: d.battery_cell_count or 1
+        for d in devices if (d.battery_cell_count or 1) > 1
+    }
     return render(request, "readings/dashboard.html", {
         "devices": devices,
         "metrics_display_json": json.dumps(metrics_display),
         "averages": averages,
+        "cell_counts_json": json.dumps(cell_counts),
     })
 
 
@@ -185,6 +191,12 @@ def chart_data_view(request, device_id):
     start, end = _parse_time_range(request)
     times, values = _fetch_readings(device_id, metric, start, end)
     unit = (device.capabilities or {}).get("units", {}).get(metric, "")
+
+    # Divide bat_voltage by cell count for per-cell display
+    if metric == "bat_voltage":
+        cell_count = device.battery_cell_count or 1
+        if cell_count > 1:
+            values = [round(v / cell_count, 2) for v in values]
 
     return JsonResponse({
         "times": times,
@@ -367,6 +379,17 @@ def overview_chart_data_view(request):
         for did, t, v in rows:
             series[did]["times"].append(t.isoformat())
             series[did]["values"].append(round(v, 2))
+
+    # Apply per-cell voltage division for bat_voltage
+    if metric == "bat_voltage":
+        cell_counts = dict(
+            Device.objects.filter(device_id__in=device_ids)
+            .values_list("device_id", "battery_cell_count")
+        )
+        for did, s in series.items():
+            cc = cell_counts.get(did, 1) or 1
+            if cc > 1:
+                s["values"] = [round(v / cc, 2) for v in s["values"]]
 
     # Get unit from first device that has it
     unit = ""

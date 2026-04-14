@@ -44,6 +44,7 @@
         offline: "{% filter escapejs %}{% trans 'offline' %}{% endfilter %}"
     };
     var metricDisplay = {{ metrics_display_json|safe }};
+    var cellCounts = {{ cell_counts_json|safe }};
     var refreshTimer = null;
 
     // WebSocket live updates
@@ -51,6 +52,10 @@
         try {
             var data = JSON.parse(evt.detail.message);
             if (data.device_id && data.metric !== undefined) {
+                var displayValue = data.value;
+                if (data.metric === "bat_voltage" && cellCounts[data.device_id]) {
+                    displayValue = Math.round(displayValue / cellCounts[data.device_id] * 100) / 100;
+                }
                 var el = document.getElementById("metric-" + data.device_id + "-" + data.metric);
                 if (!el) {
                     var container = document.getElementById("metrics-" + data.device_id);
@@ -69,7 +74,7 @@
                     }
                 }
                 if (el) {
-                    el.textContent = data.value;
+                    el.textContent = displayValue;
                 }
                 var ts = document.getElementById("lastseen-" + data.device_id);
                 if (ts) {

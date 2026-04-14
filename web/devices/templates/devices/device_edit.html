@@ -27,6 +27,11 @@
         <input type="number" name="publish_interval" value="{{ device.publish_interval }}" min="0" max="86400">
         <small>{% trans "0 = unknown (default 5 min timeout). Used to compute online/offline status (3× interval)." %}</small>
     </label>
+    <label>
+        {% trans "Battery cell count" %}
+        <input type="number" name="battery_cell_count" value="{{ device.battery_cell_count }}" min="1" max="10">
+        <small>{% trans "Number of battery cells. Voltage is divided by this value to display per-cell voltage." %}</small>
+    </label>
     {% if metrics %}
     <fieldset>
         <legend>{% trans "Guest-visible metrics" %}</legend>

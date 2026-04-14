@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sensor_server 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-16 00:00+0000\n"
+"POT-Creation-Date: 2026-04-14 08:09+0200\n"
 "PO-Revision-Date: 2026-03-17 00:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
@@ -16,545 +16,856 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: templates/base.html
-msgid "IoT Sensors"
-msgstr "Capteurs IoT"
-
-msgid "Dashboard"
-msgstr "Tableau de bord"
-
-msgid "Devices"
-msgstr "Appareils"
-
-msgid "Users"
-msgstr "Utilisateurs"
-
-msgid "Log out"
-msgstr "Déconnexion"
-
-msgid "Log in"
-msgstr "Connexion"
-
-msgid "Sign in with SSO"
-msgstr "Se connecter via SSO"
-
-msgid "Local account"
-msgstr "Compte local"
-
-#: accounts/templates/accounts/login.html
-msgid "Username"
-msgstr "Utilisateur"
-
-msgid "Password"
-msgstr "Mot de passe"
-
-msgid "Sign in"
-msgstr "Se connecter"
-
-msgid "Invalid credentials."
-msgstr "Identifiants invalides."
-
-#: accounts/templates/accounts/pending.html
-msgid "Awaiting approval"
-msgstr "En attente d'autorisation"
-
-msgid "ACCESS DENIED"
-msgstr "ACCÈS REFUSÉ"
-
-msgid "Well, well, well... <strong>%(name)s</strong>, look who showed up."
-msgstr "Tiens, tiens, tiens... <strong>%(name)s</strong>, regardez qui se pointe."
-
-msgid "Your access request has been recorded, timestamped, archived, printed, laminated, and filed in a drawer that nobody ever opens. An administrator will review it when they have absolutely nothing better to do."
-msgstr "Votre demande d'accès a été enregistrée, horodatée, archivée, imprimée, plastifiée, et classée dans un tiroir que personne n'ouvre jamais. Un administrateur l'examinera quand il n'aura absolument rien de mieux à faire."
-
-msgid "In the meantime, rest assured that a highly sophisticated algorithm is analyzing your request. Just kidding. It's sitting in a database column, lonely and forgotten, like the last cookie in the box."
-msgstr "En attendant, soyez rassuré : un algorithme hautement sophistiqué analyse votre demande. Non, je rigole. Elle croupit dans une colonne de base de données, seule et oubliée, comme le dernier gâteau dans la boîte."
-
-msgid "While you wait, here are some productive activities you could try:"
-msgstr "En attendant, voici quelques activités productives que vous pourriez tenter :"
-
-msgid "Count the pixels on this page"
-msgstr "Compter les pixels de cette page"
-
-msgid "Reflect on your life choices that led you here"
-msgstr "Méditer sur les choix de vie qui vous ont mené ici"
-
-msgid "Learn to knit"
-msgstr "Apprendre à tricoter"
-
-msgid "Stare at this page until it changes (spoiler: it won't)"
-msgstr "Fixer cette page jusqu'à ce qu'elle change (spoiler : elle ne changera pas)"
-
-msgid "Write a formal complaint letter to /dev/null"
-msgstr "Écrire une lettre de réclamation formelle à /dev/null"
-
-msgid "IMPORTANT NOTICE"
-msgstr "AVIS IMPORTANT"
-
-msgid "This page is scientifically engineered to be as unpleasant as possible. If you can read this without squinting, congratulations: you have a higher tolerance for bad design than most humans."
-msgstr "Cette page est scientifiquement conçue pour être aussi désagréable que possible. Si vous arrivez à la lire sans plisser les yeux, félicitations : vous avez une tolérance au mauvais goût supérieure à la moyenne de l'espèce humaine."
-
-msgid "If you don't even know how to reach the system administrator, then frankly, your situation is hopeless. Perhaps this system was not meant for you. Perhaps no system was ever meant for you. Perhaps you should go outside and touch grass."
-msgstr "Si vous ne savez même pas comment contacter l'administrateur système, alors franchement, votre cas est désespéré. Peut-être que ce système n'était pas fait pour vous. Peut-être qu'aucun système n'a jamais été fait pour vous. Peut-être devriez-vous sortir prendre l'air et toucher de l'herbe."
-
-msgid "Please wait... Estimated approval time: between now and the heat death of the universe."
-msgstr "Veuillez patienter... Délai d'approbation estimé : entre maintenant et la mort thermique de l'univers."
-
-msgid "No administrators were harmed in the making of this page. No users were respected either."
-msgstr "Aucun administrateur n'a été blessé lors de la création de cette page. Aucun utilisateur n'a été respecté non plus."
-
-#: accounts/templates/accounts/user_list.html
-msgid "User management"
-msgstr "Gestion des utilisateurs"
-
-msgid "Pending users"
-msgstr "Utilisateurs en attente"
-
-msgid "Approved users"
-msgstr "Utilisateurs approuvés"
-
-msgid "No pending users."
-msgstr "Aucun utilisateur en attente."
-
-msgid "No approved users."
-msgstr "Aucun utilisateur approuvé."
-
-msgid "User"
-msgstr "Utilisateur"
-
-msgid "Email"
-msgstr "Email"
-
-msgid "Action"
-msgstr "Action"
-
-msgid "Role"
-msgstr "Rôle"
-
-msgid "Approve"
-msgstr "Approuver"
-
-msgid "Update"
-msgstr "Modifier"
-
-msgid "Revoke"
-msgstr "Révoquer"
-
-#: accounts/models.py
-msgid "Guest"
-msgstr "Invité"
-
-msgid "Resident"
-msgstr "Habitant"
-
-msgid "Administrator"
-msgstr "Administrateur"
-
-msgid "pending"
-msgstr "en attente"
-
-#: accounts/decorators.py
+#: accounts/decorators.py:23
 msgid "You do not have the required permissions."
 msgstr "Vous n'avez pas les permissions nécessaires."
 
-#: devices/templates
-msgid "Device"
-msgstr "Appareil"
+#: accounts/models.py:8 accounts/templates/accounts/user_list.html:26
+#: accounts/templates/accounts/user_list.html:70
+msgid "Guest"
+msgstr "Invité"
 
-msgid "Type"
-msgstr "Type"
+#: accounts/models.py:9 accounts/templates/accounts/user_list.html:27
+#: accounts/templates/accounts/user_list.html:71
+msgid "Resident"
+msgstr "Habitant"
 
-msgid "Location"
-msgstr "Emplacement"
+#: accounts/models.py:10
+msgid "Administrator"
+msgstr "Administrateur"
 
-msgid "Status"
-msgstr "Statut"
+#: accounts/models.py:22
+msgid "pending"
+msgstr "en attente"
 
-msgid "Last seen"
-msgstr "Dernier contact"
+#: accounts/templates/accounts/login.html:3
+#: accounts/templates/accounts/login.html:8 templates/base.html:119
+msgid "Log in"
+msgstr "Connexion"
 
-msgid "online"
-msgstr "en ligne"
+#: accounts/templates/accounts/login.html:12
+msgid "Sign in with SSO"
+msgstr "Se connecter via SSO"
 
-msgid "offline"
-msgstr "hors ligne"
+#: accounts/templates/accounts/login.html:15
+msgid "Local account"
+msgstr "Compte local"
 
-msgid "Location not set"
-msgstr "Emplacement non défini"
+#: accounts/templates/accounts/login.html:24
+msgid "Username"
+msgstr "Utilisateur"
 
-msgid "Seen:"
-msgstr "Vu :"
+#: accounts/templates/accounts/login.html:28
+msgid "Password"
+msgstr "Mot de passe"
 
-msgid "Edit"
-msgstr "Modifier"
+#: accounts/templates/accounts/login.html:31
+msgid "Sign in"
+msgstr "Se connecter"
 
-msgid "Display name"
-msgstr "Nom d'affichage"
+#: accounts/templates/accounts/pending.html:3
+msgid "Awaiting approval"
+msgstr "En attente d'autorisation"
 
-msgid "Save"
-msgstr "Enregistrer"
+#: accounts/templates/accounts/pending.html:77
+msgid "ACCESS DENIED"
+msgstr "ACCÈS REFUSÉ"
 
-msgid "Cancel"
-msgstr "Annuler"
+#: accounts/templates/accounts/pending.html:81
+#, python-format
+msgid "Well, well, well... <strong>%(name)s</strong>, look who showed up."
+msgstr ""
+"Tiens, tiens, tiens... <strong>%(name)s</strong>, regardez qui se pointe."
 
-msgid "History"
-msgstr "Historique"
+#: accounts/templates/accounts/pending.html:85
+msgid ""
+"Your access request has been recorded, timestamped, archived, printed, "
+"laminated, and filed in a drawer that nobody ever opens. An administrator "
+"will review it when they have absolutely nothing better to do."
+msgstr ""
+"Votre demande d'accès a été enregistrée, horodatée, archivée, imprimée, "
+"plastifiée, et classée dans un tiroir que personne n'ouvre jamais. Un "
+"administrateur l'examinera quand il n'aura absolument rien de mieux à faire."
 
-msgid "Metric:"
-msgstr "Métrique :"
+#: accounts/templates/accounts/pending.html:89
+msgid ""
+"In the meantime, rest assured that a highly sophisticated algorithm is "
+"analyzing your request. Just kidding. It's sitting in a database column, "
+"lonely and forgotten, like the last cookie in the box."
+msgstr ""
+"En attendant, soyez rassuré : un algorithme hautement sophistiqué analyse "
+"votre demande. Non, je rigole. Elle croupit dans une colonne de base de "
+"données, seule et oubliée, comme le dernier gâteau dans la boîte."
 
-msgid "Temperature"
-msgstr "Température"
+#: accounts/templates/accounts/pending.html:93
+msgid "While you wait, here are some productive activities you could try:"
+msgstr ""
+"En attendant, voici quelques activités productives que vous pourriez tenter :"
 
-msgid "Humidity"
-msgstr "Humidité"
+#: accounts/templates/accounts/pending.html:96
+msgid "Count the pixels on this page"
+msgstr "Compter les pixels de cette page"
 
-msgid "Period:"
-msgstr "Période :"
+#: accounts/templates/accounts/pending.html:97
+msgid "Reflect on your life choices that led you here"
+msgstr "Méditer sur les choix de vie qui vous ont mené ici"
 
-msgid "3 days"
-msgstr "3 jours"
+#: accounts/templates/accounts/pending.html:98
+msgid "Learn to knit"
+msgstr "Apprendre à tricoter"
 
-msgid "7 days"
-msgstr "7 jours"
+#: accounts/templates/accounts/pending.html:99
+msgid "Stare at this page until it changes (spoiler: it won't)"
+msgstr ""
+"Fixer cette page jusqu'à ce qu'elle change (spoiler : elle ne changera pas)"
 
-msgid "Send command"
-msgstr "Envoyer une commande"
+#: accounts/templates/accounts/pending.html:100
+msgid "Write a formal complaint letter to /dev/null"
+msgstr "Écrire une lettre de réclamation formelle à /dev/null"
 
-msgid "Send"
-msgstr "Envoyer"
+#: accounts/templates/accounts/pending.html:104
+msgid "IMPORTANT NOTICE"
+msgstr "AVIS IMPORTANT"
 
-msgid "Command history"
-msgstr "Historique des commandes"
+#: accounts/templates/accounts/pending.html:107
+msgid ""
+"This page is scientifically engineered to be as unpleasant as possible. If "
+"you can read this without squinting, congratulations: you have a higher "
+"tolerance for bad design than most humans."
+msgstr ""
+"Cette page est scientifiquement conçue pour être aussi désagréable que "
+"possible. Si vous arrivez à la lire sans plisser les yeux, félicitations : "
+"vous avez une tolérance au mauvais goût supérieure à la moyenne de l'espèce "
+"humaine."
 
-msgid "Date"
-msgstr "Date"
+#: accounts/templates/accounts/pending.html:111
+msgid ""
+"If you don't even know how to reach the system administrator, then frankly, "
+"your situation is hopeless. Perhaps this system was not meant for you. "
+"Perhaps no system was ever meant for you. Perhaps you should go outside and "
+"touch grass."
+msgstr ""
+"Si vous ne savez même pas comment contacter l'administrateur système, alors "
+"franchement, votre cas est désespéré. Peut-être que ce système n'était pas "
+"fait pour vous. Peut-être qu'aucun système n'a jamais été fait pour vous. "
+"Peut-être devriez-vous sortir prendre l'air et toucher de l'herbe."
 
-msgid "Command"
-msgstr "Commande"
+#: accounts/templates/accounts/pending.html:115
+msgid ""
+"Please wait... Estimated approval time: between now and the heat death of "
+"the universe."
+msgstr ""
+"Veuillez patienter... Délai d'approbation estimé : entre maintenant et la "
+"mort thermique de l'univers."
 
-msgid "By"
-msgstr "Par"
+#: accounts/templates/accounts/pending.html:120
+msgid ""
+"No administrators were harmed in the making of this page. No users were "
+"respected either."
+msgstr ""
+"Aucun administrateur n'a été blessé lors de la création de cette page. Aucun "
+"utilisateur n'a été respecté non plus."
 
-msgid "ACK"
-msgstr "ACK"
+#: accounts/templates/accounts/user_list.html:3
+msgid "User management"
+msgstr "Gestion des utilisateurs"
 
-msgid "Yes"
-msgstr "Oui"
+#: accounts/templates/accounts/user_list.html:6
+msgid "Pending users"
+msgstr "Utilisateurs en attente"
 
-msgid "No"
-msgstr "Non"
+#: accounts/templates/accounts/user_list.html:12
+#: accounts/templates/accounts/user_list.html:48
+msgid "User"
+msgstr "Utilisateur"
 
-msgid "No commands sent."
-msgstr "Aucune commande envoyée."
+#: accounts/templates/accounts/user_list.html:13
+#: accounts/templates/accounts/user_list.html:49
+msgid "Email"
+msgstr "Email"
 
-msgid "No devices detected. Devices will appear automatically when they publish to MQTT."
-msgstr "Aucun appareil détecté. Les appareils apparaîtront automatiquement quand ils publieront sur MQTT."
+#: accounts/templates/accounts/user_list.html:14
+#: accounts/templates/accounts/user_list.html:51
+#: devices/templates/devices/_device_tables.html:13
+#: devices/templates/devices/_device_tables.html:52
+msgid "Action"
+msgstr "Action"
 
-#: devices/views.py
-msgid "Empty command."
-msgstr "Commande vide."
+#: accounts/templates/accounts/user_list.html:28
+#: accounts/templates/accounts/user_list.html:72
+msgid "Admin"
+msgstr ""
 
-msgid "MQTT publish error."
-msgstr "Erreur d'envoi MQTT."
+#: accounts/templates/accounts/user_list.html:30
+#: devices/templates/devices/_device_tables.html:28
+msgid "Approve"
+msgstr "Approuver"
 
-#: devices/templates (approval & capabilities)
-msgid "Pending approval"
-msgstr "En attente d'approbation"
+#: accounts/templates/accounts/user_list.html:39
+msgid "No pending users."
+msgstr "Aucun utilisateur en attente."
 
-msgid "Approved devices"
-msgstr "Appareils approuvés"
+#: accounts/templates/accounts/user_list.html:42
+msgid "Approved users"
+msgstr "Utilisateurs approuvés"
 
-msgid "approved"
-msgstr "approuvé"
+#: accounts/templates/accounts/user_list.html:50
+msgid "Role"
+msgstr "Rôle"
 
-msgid "pending approval"
-msgstr "en attente d'approbation"
-
-msgid "Approve device"
-msgstr "Approuver l'appareil"
-
-msgid "Revoke approval"
-msgstr "Révoquer l'approbation"
-
-msgid "Request capabilities"
-msgstr "Demander les capacités"
-
-msgid "Hardware ID:"
-msgstr "ID matériel :"
-
-msgid "Capabilities"
-msgstr "Capacités"
-
-msgid "Metrics:"
-msgstr "Métriques :"
-
-msgid "Accepted commands:"
-msgstr "Commandes acceptées :"
-
-msgid "Publish interval:"
-msgstr "Intervalle de publication :"
-
-msgid "Online"
-msgstr "En ligne"
-
-msgid "Offline"
-msgstr "Hors ligne"
-
-msgid "online status"
-msgstr "statut de connexion"
-
-#: accounts/views.py
-msgid "Cannot modify the superuser account."
-msgstr "Impossible de modifier le compte super-administrateur."
-
+#: accounts/templates/accounts/user_list.html:65
 msgid "Protected"
 msgstr "Protégé"
 
-#: devices/templates (history & admin views)
-msgid "Administration"
-msgstr "Administration"
+#: accounts/templates/accounts/user_list.html:73
+#: devices/templates/devices/_device_tables.html:82
+msgid "Revoke"
+msgstr "Révoquer"
 
-msgid "View history"
-msgstr "Voir l'historique"
+#: accounts/templates/accounts/user_list.html:75
+msgid "Update"
+msgstr "Modifier"
 
-msgid "Guest-visible metrics"
-msgstr "Mesures visibles par les invités"
+#: accounts/templates/accounts/user_list.html:85
+msgid "No approved users."
+msgstr "Aucun utilisateur approuvé."
 
-msgid "Guest-visible metrics:"
-msgstr "Mesures visibles par les invités :"
+#: accounts/views.py:28
+msgid "Invalid credentials."
+msgstr "Identifiants invalides."
 
-msgid "No metrics available for this device."
-msgstr "Aucune mesure disponible pour cet appareil."
+#: accounts/views.py:67
+msgid "Cannot modify the superuser account."
+msgstr "Impossible de modifier le compte super-administrateur."
 
-msgid "Time range"
-msgstr "Plage temporelle"
+#: devices/admin.py:8
+msgid "online status"
+msgstr "statut de connexion"
 
-msgid "Custom range"
-msgstr "Plage personnalisée"
+#: devices/admin.py:12
+msgid "Online"
+msgstr "En ligne"
 
-msgid "From:"
-msgstr "Du :"
+#: devices/admin.py:12
+msgid "Offline"
+msgstr "Hors ligne"
 
-msgid "To:"
-msgstr "Au :"
+#: devices/templates/devices/_command_log.html:7
+msgid "Date"
+msgstr "Date"
 
-msgid "Apply"
-msgstr "Appliquer"
+#: devices/templates/devices/_command_log.html:8
+#: devices/templates/devices/device_admin.html:67
+msgid "Command"
+msgstr "Commande"
 
-msgid "1 hour"
-msgstr "1 heure"
+#: devices/templates/devices/_command_log.html:9
+msgid "By"
+msgstr "Par"
 
-msgid "6 hours"
-msgstr "6 heures"
+#: devices/templates/devices/_command_log.html:10
+msgid "ACK"
+msgstr "ACK"
 
-msgid "1 day"
-msgstr "1 jour"
+#: devices/templates/devices/_command_log.html:22
+msgid "Yes"
+msgstr "Oui"
 
-msgid "1 month"
-msgstr "1 mois"
+#: devices/templates/devices/_command_log.html:22
+msgid "No"
+msgstr "Non"
 
-msgid "2 months"
-msgstr "2 mois"
-
-msgid "3 months"
-msgstr "3 mois"
-
-msgid "1 year"
-msgstr "1 an"
-
-msgid "Refresh:"
-msgstr "Rafraîchissement :"
-
-msgid "Off"
-msgstr "Désactivé"
-
-#: devices/templates (status timeline & overview)
-msgid "Device status"
-msgstr "Statut de l'appareil"
-
-msgid "Overview"
-msgstr "Vue d'ensemble"
-
-msgid "No metrics available."
-msgstr "Aucune mesure disponible."
-
-msgid "Select all"
-msgstr "Tout sélectionner"
-
-msgid "Deselect all"
-msgstr "Tout désélectionner"
-
-#: devices/templates (enhanced capabilities)
-msgid "Command parameters"
-msgstr "Paramètres de commande"
-
-msgid "Action:"
-msgstr "Action :"
-
-msgid "Raw JSON command"
-msgstr "Commande JSON brute"
-
-#: devices/templates (command form)
-msgid "Parameters:"
-msgstr "Paramètres :"
-
-msgid "value1, value2, ..."
-msgstr "valeur1, valeur2, ..."
-
-msgid "Expected:"
-msgstr "Attendu :"
-
-msgid "Metric"
-msgstr "Métrique"
-
-msgid "Unit"
-msgstr "Unité"
-
-msgid "Parameters"
-msgstr "Paramètres"
-
-#: devices/templates (command log management)
+#: devices/templates/devices/_command_log.html:25
 msgid "Delete this command?"
 msgstr "Supprimer cette commande ?"
 
+#: devices/templates/devices/_command_log.html:37
 msgid "Delete all command history?"
 msgstr "Supprimer tout l'historique des commandes ?"
 
+#: devices/templates/devices/_command_log.html:39
 msgid "Clear all"
 msgstr "Tout effacer"
 
-#: devices/templates (device edit - publish interval)
-msgid "Publish interval (seconds)"
-msgstr "Intervalle de publication (secondes)"
+#: devices/templates/devices/_command_log.html:43
+msgid "No commands sent."
+msgstr "Aucune commande envoyée."
 
-msgid "0 = unknown (default 5 min timeout). Used to compute online/offline status (3× interval)."
-msgstr "0 = inconnu (délai par défaut 5 min). Utilisé pour calculer le statut en ligne/hors ligne (3× l'intervalle)."
+#: devices/templates/devices/_device_card.html:6
+#: devices/templates/devices/_device_tables.html:68
+#: devices/templates/devices/device_admin.html:19
+#: devices/templates/devices/device_history.html:38
+#: readings/templates/readings/dashboard.html:43
+msgid "online"
+msgstr "en ligne"
 
-#: readings/views, devices/templates (delete readings)
-msgid "Delete readings"
-msgstr "Supprimer des mesures"
+#: devices/templates/devices/_device_card.html:6
+#: devices/templates/devices/_device_tables.html:68
+#: devices/templates/devices/device_admin.html:19
+#: devices/templates/devices/device_history.html:38
+#: readings/templates/readings/dashboard.html:44
+msgid "offline"
+msgstr "hors ligne"
 
-msgid "All metrics"
-msgstr "Toutes les métriques"
+#: devices/templates/devices/_device_card.html:17
+#: devices/templates/devices/device_admin.html:15
+#: devices/templates/devices/device_history.html:36
+msgid "Location not set"
+msgstr "Emplacement non défini"
 
-msgid "Delete"
-msgstr "Supprimer"
-
-msgid "Delete selected readings? This cannot be undone."
-msgstr "Supprimer les mesures sélectionnées ? Cette action est irréversible."
-
-msgid "Invalid time range."
-msgstr "Plage de temps invalide."
-
-msgid "No readings found in this range."
-msgstr "Aucune mesure trouvée dans cette plage."
-
-msgid "%(count)d readings deleted."
-msgstr "%(count)d mesures supprimées."
-
-#: readings/metrics.py
-msgid "Pressure"
-msgstr "Pression"
-
-msgid "UV index"
-msgstr "Indice UV"
-
-msgid "Luminosity"
-msgstr "Luminosité"
-
-msgid "RSSI"
-msgstr "RSSI"
-
-msgid "Battery"
-msgstr "Batterie"
-
-msgid "Battery voltage"
-msgstr "Tension batterie"
-
-#: devices/views.py devices/templates (delete device)
-msgid "Delete device"
-msgstr "Supprimer l'appareil"
-
-msgid "Are you sure you want to delete <strong>%(name)s</strong> (<code>%(id)s</code>)?"
-msgstr "Êtes-vous sûr de vouloir supprimer <strong>%(name)s</strong> (<code>%(id)s</code>) ?"
-
-msgid "This will permanently delete the device and <strong>%(count)s</strong> sensor readings. This cannot be undone."
-msgstr "Cela supprimera définitivement l'appareil et <strong>%(count)s</strong> mesures. Cette action est irréversible."
-
-#: devices/views.py devices/templates (rename device)
-msgid "Rename device"
-msgstr "Renommer l'appareil"
-
-msgid "Rename"
-msgstr "Renommer"
-
-msgid "Current device ID: <code>%(name)s</code>"
-msgstr "ID de l'appareil actuel : <code>%(name)s</code>"
-
-msgid "New device ID"
-msgstr "Nouvel ID d'appareil"
-
-msgid "Letters, digits, hyphens, and underscores only."
-msgstr "Lettres, chiffres, tirets et underscores uniquement."
-
-msgid "If a device with this ID already exists, you will be asked to confirm a merge."
-msgstr "Si un appareil avec cet ID existe déjà, une confirmation de fusion vous sera demandée."
-
-msgid "Device ID cannot be empty."
-msgstr "L'ID de l'appareil ne peut pas être vide."
-
-msgid "Device ID may only contain letters, digits, hyphens, and underscores."
-msgstr "L'ID de l'appareil ne peut contenir que des lettres, chiffres, tirets et underscores."
-
-#: devices/views.py devices/templates (merge devices)
-msgid "Confirm merge"
-msgstr "Confirmer la fusion"
-
-msgid "Merge"
-msgstr "Fusionner"
-
-msgid "A device with ID <code>%(target)s</code> already exists. Renaming <code>%(source)s</code> will merge its data into <code>%(target)s</code>."
-msgstr "Un appareil avec l'ID <code>%(target)s</code> existe déjà. Renommer <code>%(source)s</code> fusionnera ses données dans <code>%(target)s</code>."
-
-msgid "For metrics that exist on both devices, the series with the most recent reading will be kept. The other series will be deleted."
-msgstr "Pour les métriques présentes sur les deux appareils, la série ayant la mesure la plus récente sera conservée. L'autre série sera supprimée."
-
-msgid "<strong>%(name)s</strong> will be deleted after the merge."
-msgstr "<strong>%(name)s</strong> sera supprimé après la fusion."
-
-msgid "Previous"
-msgstr "Précédent"
-
-msgid "Next"
-msgstr "Suivant"
-
+#: devices/templates/devices/_device_card.html:18
+#: devices/templates/devices/_device_tables.html:63
+#: devices/templates/devices/device_admin.html:16
+#: devices/templates/devices/device_edit.html:21
+#: readings/templates/readings/_dashboard_cards.html:7
 msgid "Indoor"
 msgstr "Intérieur"
 
+#: devices/templates/devices/_device_card.html:19
+#: devices/templates/devices/_device_tables.html:64
+#: devices/templates/devices/device_admin.html:17
+#: devices/templates/devices/device_edit.html:22
+#: readings/templates/readings/_dashboard_cards.html:8
 msgid "Outdoor"
 msgstr "Extérieur"
 
-msgid "Location type"
-msgstr "Type d'emplacement"
+#: devices/templates/devices/_device_card.html:28
+msgid "Seen:"
+msgstr "Vu :"
 
-msgid "Averages"
-msgstr "Moyennes"
+#: devices/templates/devices/_device_tables.html:4
+msgid "Pending approval"
+msgstr "En attente d'approbation"
 
+#: devices/templates/devices/_device_tables.html:9
+#: devices/templates/devices/_device_tables.html:45
+msgid "Device"
+msgstr "Appareil"
+
+#: devices/templates/devices/_device_tables.html:10
+#: devices/templates/devices/_device_tables.html:46
+msgid "Type"
+msgstr "Type"
+
+#: devices/templates/devices/_device_tables.html:11
+#: devices/templates/devices/_device_tables.html:50
+msgid "Last seen"
+msgstr "Dernier contact"
+
+#: devices/templates/devices/_device_tables.html:39
+msgid "Approved devices"
+msgstr "Appareils approuvés"
+
+#: devices/templates/devices/_device_tables.html:47
+#: devices/templates/devices/device_edit.html:14
+msgid "Location"
+msgstr "Emplacement"
+
+#: devices/templates/devices/_device_tables.html:49
+msgid "Status"
+msgstr "Statut"
+
+#: devices/templates/devices/_device_tables.html:92
+#: readings/templates/readings/_dashboard_cards.html:24
+msgid ""
+"No devices detected. Devices will appear automatically when they publish to "
+"MQTT."
+msgstr ""
+"Aucun appareil détecté. Les appareils apparaîtront automatiquement quand ils "
+"publieront sur MQTT."
+
+#: devices/templates/devices/device_admin.html:3
+#: devices/templates/devices/device_history.html:41
+msgid "Administration"
+msgstr "Administration"
+
+#: devices/templates/devices/device_admin.html:9
+#: devices/templates/devices/device_history.html:30
+msgid "Previous"
+msgstr "Précédent"
+
+#: devices/templates/devices/device_admin.html:10
+#: devices/templates/devices/device_history.html:31
+#: devices/templates/devices/device_list.html:3
+#: devices/templates/devices/device_list.html:6 templates/base.html:96
+msgid "Devices"
+msgstr "Appareils"
+
+#: devices/templates/devices/device_admin.html:11
+#: devices/templates/devices/device_history.html:32
+msgid "Next"
+msgstr "Suivant"
+
+#: devices/templates/devices/device_admin.html:22
+msgid "approved"
+msgstr "approuvé"
+
+#: devices/templates/devices/device_admin.html:24
+msgid "pending approval"
+msgstr "en attente d'approbation"
+
+#: devices/templates/devices/device_admin.html:26
+#: devices/templates/devices/device_edit.html:3
+#: devices/templates/devices/device_edit.html:6
+msgid "Edit"
+msgstr "Modifier"
+
+#: devices/templates/devices/device_admin.html:27
+#: devices/templates/devices/device_rename.html:20
+msgid "Rename"
+msgstr "Renommer"
+
+#: devices/templates/devices/device_admin.html:28
+msgid "History"
+msgstr "Historique"
+
+#: devices/templates/devices/device_admin.html:38
+msgid "Hardware ID:"
+msgstr "ID matériel :"
+
+#: devices/templates/devices/device_admin.html:43
+msgid "Capabilities"
+msgstr "Capacités"
+
+#: devices/templates/devices/device_admin.html:45
+msgid "Publish interval:"
+msgstr "Intervalle de publication :"
+
+#: devices/templates/devices/device_admin.html:48
+msgid "Metrics:"
+msgstr "Métriques :"
+
+#: devices/templates/devices/device_admin.html:51
+msgid "Metric"
+msgstr "Métrique"
+
+#: devices/templates/devices/device_admin.html:51
+msgid "Unit"
+msgstr "Unité"
+
+#: devices/templates/devices/device_admin.html:64
+msgid "Accepted commands:"
+msgstr "Commandes acceptées :"
+
+#: devices/templates/devices/device_admin.html:67
+msgid "Parameters"
+msgstr "Paramètres"
+
+#: devices/templates/devices/device_admin.html:90
+msgid "Guest-visible metrics:"
+msgstr "Mesures visibles par les invités :"
+
+#: devices/templates/devices/device_admin.html:98
+msgid "Request capabilities"
+msgstr "Demander les capacités"
+
+#: devices/templates/devices/device_admin.html:105
 msgid "Calibration"
 msgstr "Calibration"
 
+#: devices/templates/devices/device_admin.html:106
 msgid "Adjust sensor offsets. The value is added to the raw reading."
-msgstr "Ajuster les offsets des capteurs. La valeur est ajoutée à la mesure brute."
+msgstr ""
+"Ajuster les offsets des capteurs. La valeur est ajoutée à la mesure brute."
 
+#: devices/templates/devices/device_admin.html:118
+#: devices/templates/devices/device_history.html:89
+#: readings/templates/readings/overview.html:69
+msgid "Apply"
+msgstr "Appliquer"
+
+#: devices/templates/devices/device_admin.html:126
 msgid "Request current offsets"
 msgstr "Demander les offsets actuels"
 
+#: devices/templates/devices/device_admin.html:135
+msgid "Approve device"
+msgstr "Approuver l'appareil"
+
+#: devices/templates/devices/device_admin.html:139
+msgid "Send command"
+msgstr "Envoyer une commande"
+
+#: devices/templates/devices/device_admin.html:144
+msgid "Action:"
+msgstr "Action :"
+
+#: devices/templates/devices/device_admin.html:155
+msgid "Parameters:"
+msgstr "Paramètres :"
+
+#: devices/templates/devices/device_admin.html:156
+msgid "value1, value2, ..."
+msgstr "valeur1, valeur2, ..."
+
+#: devices/templates/devices/device_admin.html:158
+msgid "Send"
+msgstr "Envoyer"
+
+#: devices/templates/devices/device_admin.html:165
+msgid "Command history"
+msgstr "Historique des commandes"
+
+#: devices/templates/devices/device_admin.html:172
+msgid "Danger zone"
+msgstr "Zone de danger"
+
+#: devices/templates/devices/device_admin.html:177
+msgid "Revoke approval"
+msgstr "Révoquer l'approbation"
+
+#: devices/templates/devices/device_admin.html:180
+#: devices/templates/devices/device_delete_confirm.html:3
+#: devices/templates/devices/device_delete_confirm.html:6
+msgid "Delete device"
+msgstr "Supprimer l'appareil"
+
+#: devices/templates/devices/device_admin.html:199
+msgid "Expected:"
+msgstr "Attendu :"
+
+#: devices/templates/devices/device_delete_confirm.html:7
+#, python-format
+msgid ""
+"Are you sure you want to delete <strong>%(name)s</strong> (<code>%(id)s</"
+"code>)?"
+msgstr ""
+"Êtes-vous sûr de vouloir supprimer <strong>%(name)s</strong> (<code>%(id)s</"
+"code>) ?"
+
+#: devices/templates/devices/device_delete_confirm.html:8
+#, python-format
+msgid ""
+"This will permanently delete the device and <strong>%(count)s</strong> "
+"sensor readings. This cannot be undone."
+msgstr ""
+"Cela supprimera définitivement l'appareil et <strong>%(count)s</strong> "
+"mesures. Cette action est irréversible."
+
+#: devices/templates/devices/device_delete_confirm.html:12
+#: devices/templates/devices/device_history.html:119
+msgid "Delete"
+msgstr "Supprimer"
+
+#: devices/templates/devices/device_delete_confirm.html:13
+#: devices/templates/devices/device_edit.html:49
+#: devices/templates/devices/device_rename.html:21
+#: devices/templates/devices/device_rename_merge_confirm.html:16
+msgid "Cancel"
+msgstr "Annuler"
+
+#: devices/templates/devices/device_edit.html:10
+msgid "Display name"
+msgstr "Nom d'affichage"
+
+#: devices/templates/devices/device_edit.html:18
+msgid "Location type"
+msgstr "Type d'emplacement"
+
+#: devices/templates/devices/device_edit.html:26
+msgid "Publish interval (seconds)"
+msgstr "Intervalle de publication (secondes)"
+
+#: devices/templates/devices/device_edit.html:28
+msgid ""
+"0 = unknown (default 5 min timeout). Used to compute online/offline status "
+"(3× interval)."
+msgstr ""
+"0 = inconnu (délai par défaut 5 min). Utilisé pour calculer le statut en "
+"ligne/hors ligne (3× l'intervalle)."
+
+#: devices/templates/devices/device_edit.html:31
+msgid "Battery cell count"
+msgstr "Nombre de cellules"
+
+#: devices/templates/devices/device_edit.html:33
+msgid ""
+"Number of battery cells. Voltage is divided by this value to display per-"
+"cell voltage."
+msgstr ""
+"Nombre de cellules de la batterie. La tension est divisée par cette valeur "
+"pour afficher la tension par cellule."
+
+#: devices/templates/devices/device_edit.html:37
+msgid "Guest-visible metrics"
+msgstr "Mesures visibles par les invités"
+
+#: devices/templates/devices/device_edit.html:48
+msgid "Save"
+msgstr "Enregistrer"
+
+#: devices/templates/devices/device_history.html:52
+#: readings/templates/readings/overview.html:32
+msgid "Time range"
+msgstr "Plage temporelle"
+
+#: devices/templates/devices/device_history.html:55
+#: readings/templates/readings/overview.html:35
+msgid "1 hour"
+msgstr "1 heure"
+
+#: devices/templates/devices/device_history.html:56
+#: readings/templates/readings/overview.html:36
+msgid "6 hours"
+msgstr "6 heures"
+
+#: devices/templates/devices/device_history.html:57
+#: readings/templates/readings/overview.html:37
+msgid "1 day"
+msgstr "1 jour"
+
+#: devices/templates/devices/device_history.html:58
+#: readings/templates/readings/overview.html:38
+msgid "7 days"
+msgstr "7 jours"
+
+#: devices/templates/devices/device_history.html:59
+#: readings/templates/readings/overview.html:39
+msgid "1 month"
+msgstr "1 mois"
+
+#: devices/templates/devices/device_history.html:60
+#: readings/templates/readings/overview.html:40
+msgid "2 months"
+msgstr "2 mois"
+
+#: devices/templates/devices/device_history.html:61
+#: readings/templates/readings/overview.html:41
+msgid "3 months"
+msgstr "3 mois"
+
+#: devices/templates/devices/device_history.html:62
+#: readings/templates/readings/overview.html:42
+msgid "1 year"
+msgstr "1 an"
+
+#: devices/templates/devices/device_history.html:65
+#: readings/templates/readings/dashboard.html:21
+#: readings/templates/readings/overview.html:45
+msgid "Refresh:"
+msgstr "Rafraîchissement :"
+
+#: devices/templates/devices/device_history.html:67
+#: readings/templates/readings/dashboard.html:23
+#: readings/templates/readings/overview.html:47
+msgid "Off"
+msgstr "Désactivé"
+
+#: devices/templates/devices/device_history.html:77
+#: devices/templates/devices/device_history.html:107
+#: readings/templates/readings/overview.html:57
+msgid "From:"
+msgstr "Du :"
+
+#: devices/templates/devices/device_history.html:83
+#: devices/templates/devices/device_history.html:113
+#: readings/templates/readings/overview.html:63
+msgid "To:"
+msgstr "Au :"
+
+#: devices/templates/devices/device_history.html:95
+msgid "Delete readings"
+msgstr "Supprimer des mesures"
+
+#: devices/templates/devices/device_history.html:99
+msgid "Metric:"
+msgstr "Métrique :"
+
+#: devices/templates/devices/device_history.html:101
+msgid "All metrics"
+msgstr "Toutes les métriques"
+
+#: devices/templates/devices/device_history.html:128
+#: readings/templates/readings/overview.html:80
+msgid "Device status"
+msgstr "Statut de l'appareil"
+
+#: devices/templates/devices/device_history.html:137
+msgid "No metrics available for this device."
+msgstr "Aucune mesure disponible pour cet appareil."
+
+#: devices/templates/devices/device_history.html:327
+msgid "Delete selected readings? This cannot be undone."
+msgstr "Supprimer les mesures sélectionnées ? Cette action est irréversible."
+
+#: devices/templates/devices/device_rename.html:3
+#: devices/templates/devices/device_rename.html:6
+msgid "Rename device"
+msgstr "Renommer l'appareil"
+
+#: devices/templates/devices/device_rename.html:7
+#, python-format
+msgid "Current device ID: <code>%(name)s</code>"
+msgstr "ID de l'appareil actuel : <code>%(name)s</code>"
+
+#: devices/templates/devices/device_rename.html:14
+msgid "New device ID"
+msgstr "Nouvel ID d'appareil"
+
+#: devices/templates/devices/device_rename.html:16
+msgid "Letters, digits, hyphens, and underscores only."
+msgstr "Lettres, chiffres, tirets et underscores uniquement."
+
+#: devices/templates/devices/device_rename.html:18
+msgid ""
+"If a device with this ID already exists, you will be asked to confirm a "
+"merge."
+msgstr ""
+"Si un appareil avec cet ID existe déjà, une confirmation de fusion vous sera "
+"demandée."
+
+#: devices/templates/devices/device_rename_merge_confirm.html:3
+#: devices/templates/devices/device_rename_merge_confirm.html:6
+msgid "Confirm merge"
+msgstr "Confirmer la fusion"
+
+#: devices/templates/devices/device_rename_merge_confirm.html:7
+#, python-format
+msgid ""
+"A device with ID <code>%(target)s</code> already exists. Renaming "
+"<code>%(source)s</code> will merge its data into <code>%(target)s</code>."
+msgstr ""
+"Un appareil avec l'ID <code>%(target)s</code> existe déjà. Renommer "
+"<code>%(source)s</code> fusionnera ses données dans <code>%(target)s</code>."
+
+#: devices/templates/devices/device_rename_merge_confirm.html:8
+msgid ""
+"For metrics that exist on both devices, the series with the most recent "
+"reading will be kept. The other series will be deleted."
+msgstr ""
+"Pour les métriques présentes sur les deux appareils, la série ayant la "
+"mesure la plus récente sera conservée. L'autre série sera supprimée."
+
+#: devices/templates/devices/device_rename_merge_confirm.html:9
+#, python-format
+msgid "<strong>%(name)s</strong> will be deleted after the merge."
+msgstr "<strong>%(name)s</strong> sera supprimé après la fusion."
+
+#: devices/templates/devices/device_rename_merge_confirm.html:15
+msgid "Merge"
+msgstr "Fusionner"
+
+#: devices/views.py:100 readings/metrics.py:11
+msgid "Temperature"
+msgstr "Température"
+
+#: devices/views.py:101 readings/metrics.py:12
+msgid "Humidity"
+msgstr "Humidité"
+
+#: devices/views.py:102 readings/metrics.py:13
+msgid "Pressure"
+msgstr "Pression"
+
+#: devices/views.py:172
 msgid "Invalid metric."
 msgstr "Métrique invalide."
 
+#: devices/views.py:177
 msgid "Invalid value."
 msgstr "Valeur invalide."
 
-msgid "Danger zone"
-msgstr "Zone de danger"
+#: devices/views.py:186 devices/views.py:229
+msgid "MQTT publish error."
+msgstr "Erreur d'envoi MQTT."
+
+#: devices/views.py:215
+msgid "Empty command."
+msgstr "Commande vide."
+
+#: devices/views.py:352
+msgid "Device ID cannot be empty."
+msgstr "L'ID de l'appareil ne peut pas être vide."
+
+#: devices/views.py:357
+msgid "Device ID may only contain letters, digits, hyphens, and underscores."
+msgstr ""
+"L'ID de l'appareil ne peut contenir que des lettres, chiffres, tirets et "
+"underscores."
+
+#: readings/metrics.py:14
+msgid "UV index"
+msgstr "Indice UV"
+
+#: readings/metrics.py:15
+msgid "Luminosity"
+msgstr "Luminosité"
+
+#: readings/metrics.py:16
+msgid "RSSI"
+msgstr "RSSI"
+
+#: readings/metrics.py:17
+msgid "Battery"
+msgstr "Batterie"
+
+#: readings/metrics.py:18
+msgid "Cell voltage"
+msgstr "Tension par cellule"
+
+#: readings/templates/readings/_dashboard_cards.html:9
+msgid "Averages"
+msgstr "Moyennes"
+
+#: readings/templates/readings/dashboard.html:3
+#: readings/templates/readings/dashboard.html:19 templates/base.html:94
+msgid "Dashboard"
+msgstr "Tableau de bord"
+
+#: readings/templates/readings/overview.html:3
+#: readings/templates/readings/overview.html:29 templates/base.html:95
+msgid "Overview"
+msgstr "Vue d'ensemble"
+
+#: readings/templates/readings/overview.html:91
+msgid "No metrics available."
+msgstr "Aucune mesure disponible."
+
+#: readings/views.py:430
+msgid "Invalid time range."
+msgstr "Plage de temps invalide."
+
+#: readings/views.py:452
+msgid "No readings found in this range."
+msgstr "Aucune mesure trouvée dans cette plage."
+
+#: readings/views.py:471
+#, python-format
+msgid "%(count)d readings deleted."
+msgstr "%(count)d mesures supprimées."
+
+#: templates/base.html:7 templates/base.html:85
+msgid "IoT Sensors"
+msgstr "Capteurs IoT"
+
+#: templates/base.html:98
+msgid "Users"
+msgstr "Utilisateurs"
+
+#: templates/base.html:107 templates/base.html:115
+msgid "Log out"
+msgstr "Déconnexion"
+
+#~ msgid "Period:"
+#~ msgstr "Période :"
+
+#~ msgid "3 days"
+#~ msgstr "3 jours"
+
+#~ msgid "View history"
+#~ msgstr "Voir l'historique"
+
+#~ msgid "Custom range"
+#~ msgstr "Plage personnalisée"
+
+#~ msgid "Select all"
+#~ msgstr "Tout sélectionner"
+
+#~ msgid "Deselect all"
+#~ msgstr "Tout désélectionner"
+
+#~ msgid "Command parameters"
+#~ msgstr "Paramètres de commande"
+
+#~ msgid "Raw JSON command"
+#~ msgstr "Commande JSON brute"

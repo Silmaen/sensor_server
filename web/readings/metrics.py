@@ -15,7 +15,7 @@ METRIC_DISPLAY = {
     "lux": (_("Luminosity"), "lx"),
     "rssi": (_("RSSI"), "dBm"),
     "bat_percent": (_("Battery"), "%"),
-    "bat_voltage": (_("Battery voltage"), "V"),
+    "bat_voltage": (_("Cell voltage"), "V"),
 }
 
 

@@ -43,6 +43,7 @@ class Device(models.Model):
     location_type = models.CharField(
         max_length=16, blank=True, default="", choices=LOCATION_TYPE_CHOICES
     )
+    battery_cell_count = models.PositiveSmallIntegerField(default=1)
 
     class Meta:
         ordering = ["device_id"]
