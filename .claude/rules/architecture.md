@@ -5,6 +5,7 @@
 - `devices` — device registry, approval workflow, capabilities discovery, command sending via MQTT.
 - `readings` — sensor data (TimescaleDB hypertable), dashboard, charts, WebSocket consumers.
 - `mqtt_bridge` — MQTT subscriber worker, auto-discovery, ingestion services, capabilities handler.
+- `api` — read-only HTTP API (`/api/v1/`) for external services. API-key (Bearer token) auth via `ApiKey` model; exposes approved devices, raw readings, and hourly/daily aggregates. No write endpoints.
 
 ## Database
 - TimescaleDB hypertable for sensor readings — `managed = False` in Django, raw SQL migrations.

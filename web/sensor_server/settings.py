@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "devices",
     "readings",
     "mqtt_bridge",
+    "api",
 ]
 
 MIDDLEWARE = [

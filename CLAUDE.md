@@ -10,7 +10,7 @@ stores time-series in TimescaleDB, serves a real-time dashboard with device cont
 ## Stack
 
 - **Docker Compose**: mosquitto, timescaledb (pg16), redis, web (Django 5.x / Daphne), nginx
-- **Django apps**: `accounts` (auth/roles/OIDC), `devices` (registry/commands), `readings` (time-series/dashboard/WebSocket), `mqtt_bridge` (MQTT worker/auto-discovery)
+- **Django apps**: `accounts` (auth/roles/OIDC), `devices` (registry/commands), `readings` (time-series/dashboard/WebSocket), `mqtt_bridge` (MQTT worker/auto-discovery), `api` (read-only HTTP API for external services)
 - **Auth**: optional Authentik SSO via mozilla-django-oidc; local login fallback when `OIDC_RP_CLIENT_ID` is empty
 - **Real-time**: Django Channels WebSocket + HTMX ws extension
 - **Charts**: ECharts via CDN
@@ -58,6 +58,7 @@ curl http://localhost:8000/healthz/
 - **Online detection**: computed from `last_seen` and `publish_interval` (offline if no data for 3× interval; default 5 min timeout when interval unknown). `is_online` is a model property, not a DB field.
 - **Status topic**: devices publish alerts (`warning`/`error`) as JSON, not online/offline. Online status is computed server-side.
 - **Protocol doc**: full MQTT protocol spec in `docs/mqtt-protocol.md`
+- **Read-only API**: `/api/v1/` (devices, raw readings, hourly/daily aggregates) for external services. Auth via `Authorization: Bearer <token>` against the `api.ApiKey` model (SHA-256 hashed, managed in Django admin). Exposes approved devices only; query params bounded. Spec in `docs/read-api.md`
 - **Security**: CSRF on all forms, logout is POST-only, WebSocket origin validation, MQTT identifier sanitization, `SECURE_*` settings enforced when `DEBUG=False`
 - **Logging**: structured JSON to file (`sensor_server.logging.JsonFormatter`), plain text to console
 - **Persistent data**: all under `$DATA_DIR` (timescaledb, mosquitto, redis, logs, certs, backups) via bind mounts
