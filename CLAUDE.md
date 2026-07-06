@@ -56,6 +56,7 @@ curl http://localhost:8000/healthz/
 - **Static files**: served by WhiteNoise, `collectstatic` runs in entrypoint
 - **Device approval**: auto-discovered devices default to `is_approved=False`; sensor data is dropped until an admin approves. Capabilities (hardware ID, metrics, commands, publish interval) are auto-requested on discovery, reconnection, and after every command. 60s timeout; no response → `error` alert.
 - **Online detection**: computed from `last_seen` and `publish_interval` (offline if no data for 3× interval; default 5 min timeout when interval unknown). `is_online` is a model property, not a DB field.
+- **Device health**: capabilities carry `hw` (hardware code → `hw_code`) and `fw` (firmware version → `fw_version`); a device that reports capabilities without either → `needs_firmware_update` (update recommended). Latest `bat_percent` is stored on `Device.battery_percent`; `battery_status` (model property) is `low` ≤20% / `critical` ≤5%. Both surface as UI badges and read-API fields. Thresholds in `devices/models.py`.
 - **Status topic**: devices publish alerts (`warning`/`error`) as JSON, not online/offline. Online status is computed server-side.
 - **Protocol doc**: full MQTT protocol spec in `docs/mqtt-protocol.md`
 - **Read-only API**: `/api/v1/` (devices, raw readings, hourly/daily aggregates) for external services. Auth via `Authorization: Bearer <token>` against the `api.ApiKey` model (SHA-256 hashed, managed in Django admin). Exposes approved devices only; query params bounded. Spec in `docs/read-api.md`

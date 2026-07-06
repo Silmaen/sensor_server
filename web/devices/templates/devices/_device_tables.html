@@ -72,6 +72,14 @@
                     {{ device.alert_level }}
                 </span>
                 {% endif %}
+                {% if device.battery_status == 'critical' %}
+                <span class="badge badge-error" title="{{ device.battery_percent }}%">🪫 {% trans "critical battery" %}</span>
+                {% elif device.battery_status == 'low' %}
+                <span class="badge badge-warning" title="{{ device.battery_percent }}%">🪫 {% trans "low battery" %}</span>
+                {% endif %}
+                {% if device.needs_firmware_update %}
+                <span class="badge badge-warning" title="{% trans 'Device reports no firmware version — update recommended' %}">⬆ {% trans "firmware update" %}</span>
+                {% endif %}
             </td>
             <td>{{ device.last_seen|date:"Y-m-d H:i"|default:"-" }}</td>
             {% if user|has_role:"admin" %}

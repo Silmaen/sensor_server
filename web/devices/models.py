@@ -21,6 +21,13 @@ DEFAULT_OFFLINE_TIMEOUT = 300
 # Time to wait for a capabilities response before flagging an error (seconds).
 CAPABILITIES_RESPONSE_TIMEOUT = 60
 
+# Server-side battery state-of-charge thresholds (percent) used to raise
+# low-battery alerts from the latest reported bat_percent, independently of
+# the device firmware's own status messages. Chosen to cover both platforms
+# (ESP 2S warns at 15%, MKR 1S at 20%).
+LOW_BATTERY_THRESHOLD = 20
+CRITICAL_BATTERY_THRESHOLD = 5
+
 
 class Device(models.Model):
     device_id = models.CharField(max_length=128, primary_key=True)
@@ -32,6 +39,12 @@ class Device(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_approved = models.BooleanField(default=False)
     hardware_id = models.CharField(max_length=256, blank=True, default="")
+    # Hardware code (shared across identical hardware) and firmware version,
+    # reported in the capabilities message. Absence signals outdated firmware.
+    hw_code = models.CharField(max_length=64, blank=True, default="")
+    fw_version = models.CharField(max_length=32, blank=True, default="")
+    # Latest reported battery state of charge (percent), for low-battery alerts.
+    battery_percent = models.FloatField(null=True, blank=True)
     capabilities = models.JSONField(default=dict, blank=True)
     publish_interval = models.PositiveIntegerField(default=0)
     alert_level = models.CharField(
@@ -65,6 +78,42 @@ class Device(models.Model):
             else DEFAULT_OFFLINE_TIMEOUT
         )
         return (timezone.now() - self.last_seen).total_seconds() < timeout
+
+    @property
+    def has_reported_capabilities(self):
+        """True once the device has answered a capabilities request."""
+        return bool(self.capabilities and self.capabilities.get("metrics"))
+
+    @property
+    def battery_status(self):
+        """Battery health from the latest bat_percent reading.
+
+        Returns "critical", "low", "ok", or None when no battery reading is
+        known (e.g. mains-powered devices).
+        """
+        if self.battery_percent is None:
+            return None
+        if self.battery_percent <= CRITICAL_BATTERY_THRESHOLD:
+            return "critical"
+        if self.battery_percent <= LOW_BATTERY_THRESHOLD:
+            return "low"
+        return "ok"
+
+    @property
+    def is_battery_low(self):
+        return self.battery_status in ("low", "critical")
+
+    @property
+    def needs_firmware_update(self):
+        """True when the device runs firmware too old to advertise hw/fw.
+
+        A device that has answered a capabilities request but reports neither a
+        hardware code nor a firmware version is assumed to run outdated
+        firmware, so an update is recommended.
+        """
+        if not self.has_reported_capabilities:
+            return False
+        return not self.hw_code or not self.fw_version
 
 
 class DeviceStatusLog(models.Model):

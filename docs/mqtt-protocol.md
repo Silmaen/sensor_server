@@ -96,6 +96,13 @@ is computed server-side (see [Online/offline detection](#onlineoffline-detection
 - Stores `alert_level` and `alert_message` on the device record
 - Broadcasts the alert to WebSocket clients in real time
 
+**Server-side low-battery detection:** independently of firmware `status`
+messages, the server tracks the latest `bat_percent` reading on each device
+(`Device.battery_percent`) and derives a battery health status: `low` at or
+below 20%, `critical` at or below 5%. This provides a low-battery alert even
+for devices whose firmware does not publish `low_battery` status messages, and
+is exposed as a badge in the UI and as `battery_status` in the read API.
+
 ### 3. Commands (`command`)
 
 **Direction:** Server -> Device
@@ -132,6 +139,8 @@ device receives them when it reconnects. `request_capabilities` uses `retain=Fal
 ```json
 {
   "id": "ESP-ABCDEF123456",
+  "hw": "esp8266-bme280-bat",
+  "fw": "1.2.0",
   "intrvl": 60,
   "metrics": {"temperature": "°C", "humidity": "%", "pressure": "hPa"},
   "cmds": {
@@ -143,10 +152,18 @@ device receives them when it reconnects. `request_capabilities` uses `retain=Fal
 
 | Field     | Type   | Required | Description                                                          |
 |-----------|--------|:--------:|----------------------------------------------------------------------|
-| `id`      | string |   Yes    | Unique hardware identifier (e.g. ESP chip ID). Max 256 chars.        |
+| `id`      | string |   Yes    | Unique chip serial (e.g. ESP chip ID), per unit. Stored as `hardware_id`. Max 256 chars. |
+| `hw`      | string |    No    | Hardware code, shared across identical hardware. Stored as `hw_code`. Max 64 chars.      |
+| `fw`      | string |    No    | Firmware version (semver). Stored as `fw_version`. Max 32 chars.     |
 | `intrvl`  | number |   Yes    | Sensor publish frequency in seconds (1-86400).                       |
 | `metrics` | object |   Yes    | Metric name → unit string (`""` if no unit). Max 16 chars per unit.  |
 | `cmds`    | object |   Yes    | Command name → array of parameter definitions (`[]` if no params).   |
+
+**Firmware update detection:** `hw` and `fw` are optional for backward
+compatibility. A device that answers a capabilities request but reports
+**neither** a hardware code **nor** a firmware version is assumed to run
+outdated firmware; the server flags it via `Device.needs_firmware_update` and
+surfaces a "firmware update recommended" badge in the UI and the read API.
 
 **Parameter definition format:**
 

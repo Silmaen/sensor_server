@@ -34,8 +34,34 @@
 </p>
 {% endif %}
 
+{% if device.battery_status == 'critical' %}
+<p class="alert-error">
+    <strong>🪫 {% trans "Critical battery:" %}</strong> {{ device.battery_percent }}% — {% trans "replace or recharge the battery." %}
+</p>
+{% elif device.battery_status == 'low' %}
+<p class="alert-warning">
+    <strong>🪫 {% trans "Low battery:" %}</strong> {{ device.battery_percent }}%
+</p>
+{% endif %}
+
+{% if device.needs_firmware_update %}
+<p class="alert-warning">
+    <strong>⬆ {% trans "Firmware update recommended." %}</strong>
+    {% trans "This device does not report a hardware code or firmware version, which indicates outdated firmware." %}
+</p>
+{% endif %}
+
 {% if device.hardware_id %}
 <p><strong>{% trans "Hardware ID:" %}</strong> <code>{{ device.hardware_id }}</code></p>
+{% endif %}
+{% if device.hw_code %}
+<p><strong>{% trans "Hardware code:" %}</strong> <code>{{ device.hw_code }}</code></p>
+{% endif %}
+{% if device.fw_version %}
+<p><strong>{% trans "Firmware version:" %}</strong> <code>{{ device.fw_version }}</code></p>
+{% endif %}
+{% if device.battery_percent is not None %}
+<p><strong>{% trans "Battery:" %}</strong> {{ device.battery_percent }}%</p>
 {% endif %}
 
 {% if device.capabilities or device.publish_interval %}

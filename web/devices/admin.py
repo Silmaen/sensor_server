@@ -28,10 +28,12 @@ class OnlineFilter(admin.SimpleListFilter):
 class DeviceAdmin(admin.ModelAdmin):
     list_display = (
         "device_id", "device_type", "display_name", "location",
-        "is_online", "is_approved", "alert_level", "publish_interval", "last_seen",
+        "is_online", "is_approved", "alert_level", "battery_percent",
+        "fw_version", "publish_interval", "last_seen",
     )
     list_filter = ("device_type", OnlineFilter, "is_approved", "alert_level")
-    search_fields = ("device_id", "display_name", "location")
+    search_fields = ("device_id", "display_name", "location", "hardware_id", "hw_code")
+    readonly_fields = ("hardware_id", "hw_code", "fw_version", "battery_percent")
 
 
 @admin.register(CommandLog)

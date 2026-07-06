@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 MAX_PAYLOAD_SIZE = 10240  # 10 KB
 MAX_METRIC_NAME_LEN = 64
 SAFE_IDENTIFIER_RE = re.compile(r"^[a-zA-Z0-9_\-]+$")
+# Firmware version accepts semver-style tokens (digits, dots, hyphens, plus).
+FW_VERSION_RE = re.compile(r"^[a-zA-Z0-9.\-+]+$")
 
 # Aliases for compact metric names sent by firmware.
 # Maps short/alternate names to canonical metric names used in the database.
@@ -223,6 +225,11 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
         stored = {r.metric: r.value for r in readings}
         logger.info("sensors %s/%s -> stored %d reading(s): %s", device_type, device_id, len(readings), stored)
 
+        # Track latest battery state of charge for server-side low-battery alerts.
+        if "bat_percent" in stored and stored["bat_percent"] != device.battery_percent:
+            device.battery_percent = stored["bat_percent"]
+            device.save(update_fields=["battery_percent"])
+
 
 def handle_status_message(device_type: str, device_id: str, payload: bytes):
     """Process a device status (warning/error) message."""
@@ -308,10 +315,21 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
         logger.warning("capabilities %s/%s -> rejected (unknown device)", device_type, device_id)
         return
 
-    # Compact keys: "id", "intrvl", "metrics" (name→unit dict), "cmds" (name→params dict)
+    # Compact keys: "id" (chip serial), "hw" (hardware code), "fw" (firmware
+    # version), "intrvl", "metrics" (name→unit dict), "cmds" (name→params dict)
     hardware_id = data.get("id", "")
     if isinstance(hardware_id, str) and len(hardware_id) <= 256:
         device.hardware_id = hardware_id
+
+    # hw/fw are optional: devices on outdated firmware omit them, which the
+    # server surfaces as a recommended firmware update (Device.needs_firmware_update).
+    hw_code = data.get("hw", "")
+    if isinstance(hw_code, str) and len(hw_code) <= 64 and (hw_code == "" or SAFE_IDENTIFIER_RE.match(hw_code)):
+        device.hw_code = hw_code
+
+    fw_version = data.get("fw", "")
+    if isinstance(fw_version, str) and len(fw_version) <= 32 and (fw_version == "" or FW_VERSION_RE.match(fw_version)):
+        device.fw_version = fw_version
 
     publish_interval = data.get("intrvl", 0)
     if isinstance(publish_interval, (int, float)) and 0 < publish_interval <= 86400:
@@ -366,14 +384,15 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
             alert_level="", alert_message="",
         )
     logger.info(
-        "capabilities %s/%s -> stored: hw=%s interval=%s metrics=%s commands=%s (pending_request=%s, cleared_timeout=%s)",
+        "capabilities %s/%s -> stored: id=%s hw=%s fw=%s interval=%s metrics=%s commands=%s (pending_request=%s, cleared_timeout=%s)",
         device_type, device_id,
-        device.hardware_id, device.publish_interval,
+        device.hardware_id, device.hw_code or "-", device.fw_version or "-",
+        device.publish_interval,
         capabilities.get("metrics"), capabilities.get("commands"),
         was_pending, had_timeout_alert,
     )
     device.save(update_fields=[
-        "hardware_id", "publish_interval", "capabilities",
+        "hardware_id", "hw_code", "fw_version", "publish_interval", "capabilities",
         "capabilities_requested_at", "alert_level", "alert_message",
     ])
 

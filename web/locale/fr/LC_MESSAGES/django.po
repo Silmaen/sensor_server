@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sensor_server 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-14 08:09+0200\n"
+"POT-Creation-Date: 2026-07-06 21:30+0200\n"
 "PO-Revision-Date: 2026-03-17 00:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
@@ -218,7 +218,7 @@ msgid "Protected"
 msgstr "Protégé"
 
 #: accounts/templates/accounts/user_list.html:73
-#: devices/templates/devices/_device_tables.html:82
+#: devices/templates/devices/_device_tables.html:90
 msgid "Revoke"
 msgstr "Révoquer"
 
@@ -238,6 +238,11 @@ msgstr "Identifiants invalides."
 msgid "Cannot modify the superuser account."
 msgstr "Impossible de modifier le compte super-administrateur."
 
+#: api/admin.py:31
+#, python-format
+msgid "API key created. Copy it now — it will not be shown again: %(token)s"
+msgstr ""
+
 #: devices/admin.py:8
 msgid "online status"
 msgstr "statut de connexion"
@@ -255,7 +260,7 @@ msgid "Date"
 msgstr "Date"
 
 #: devices/templates/devices/_command_log.html:8
-#: devices/templates/devices/device_admin.html:67
+#: devices/templates/devices/device_admin.html:93
 msgid "Command"
 msgstr "Commande"
 
@@ -307,13 +312,33 @@ msgstr "en ligne"
 msgid "offline"
 msgstr "hors ligne"
 
-#: devices/templates/devices/_device_card.html:17
+#: devices/templates/devices/_device_card.html:16
+#: devices/templates/devices/_device_tables.html:76
+msgid "critical battery"
+msgstr "batterie critique"
+
+#: devices/templates/devices/_device_card.html:18
+#: devices/templates/devices/_device_tables.html:78
+msgid "low battery"
+msgstr "batterie faible"
+
+#: devices/templates/devices/_device_card.html:21
+#: devices/templates/devices/_device_tables.html:81
+msgid "Device reports no firmware version — update recommended"
+msgstr "L'appareil ne signale aucune version de firmware — mise à jour recommandée"
+
+#: devices/templates/devices/_device_card.html:21
+#: devices/templates/devices/_device_tables.html:81
+msgid "firmware update"
+msgstr "mise à jour firmware"
+
+#: devices/templates/devices/_device_card.html:25
 #: devices/templates/devices/device_admin.html:15
 #: devices/templates/devices/device_history.html:36
 msgid "Location not set"
 msgstr "Emplacement non défini"
 
-#: devices/templates/devices/_device_card.html:18
+#: devices/templates/devices/_device_card.html:26
 #: devices/templates/devices/_device_tables.html:63
 #: devices/templates/devices/device_admin.html:16
 #: devices/templates/devices/device_edit.html:21
@@ -321,7 +346,7 @@ msgstr "Emplacement non défini"
 msgid "Indoor"
 msgstr "Intérieur"
 
-#: devices/templates/devices/_device_card.html:19
+#: devices/templates/devices/_device_card.html:27
 #: devices/templates/devices/_device_tables.html:64
 #: devices/templates/devices/device_admin.html:17
 #: devices/templates/devices/device_edit.html:22
@@ -329,7 +354,7 @@ msgstr "Intérieur"
 msgid "Outdoor"
 msgstr "Extérieur"
 
-#: devices/templates/devices/_device_card.html:28
+#: devices/templates/devices/_device_card.html:36
 msgid "Seen:"
 msgstr "Vu :"
 
@@ -365,7 +390,7 @@ msgstr "Emplacement"
 msgid "Status"
 msgstr "Statut"
 
-#: devices/templates/devices/_device_tables.html:92
+#: devices/templates/devices/_device_tables.html:100
 #: readings/templates/readings/_dashboard_cards.html:24
 msgid ""
 "No devices detected. Devices will appear automatically when they publish to "
@@ -419,108 +444,144 @@ msgstr "Renommer"
 msgid "History"
 msgstr "Historique"
 
-#: devices/templates/devices/device_admin.html:38
+#: devices/templates/devices/device_admin.html:39
+msgid "Critical battery:"
+msgstr "Batterie critique :"
+
+#: devices/templates/devices/device_admin.html:39
+msgid "replace or recharge the battery."
+msgstr "remplacez ou rechargez la batterie."
+
+#: devices/templates/devices/device_admin.html:43
+msgid "Low battery:"
+msgstr "Batterie faible :"
+
+#: devices/templates/devices/device_admin.html:49
+msgid "Firmware update recommended."
+msgstr "Mise à jour du firmware recommandée."
+
+#: devices/templates/devices/device_admin.html:50
+msgid ""
+"This device does not report a hardware code or firmware version, which "
+"indicates outdated firmware."
+msgstr ""
+"Cet appareil ne signale ni code matériel ni version de firmware, ce qui "
+"indique un firmware obsolète."
+
+#: devices/templates/devices/device_admin.html:55
 msgid "Hardware ID:"
 msgstr "ID matériel :"
 
-#: devices/templates/devices/device_admin.html:43
+#: devices/templates/devices/device_admin.html:58
+msgid "Hardware code:"
+msgstr "Code matériel :"
+
+#: devices/templates/devices/device_admin.html:61
+msgid "Firmware version:"
+msgstr "Version du firmware :"
+
+#: devices/templates/devices/device_admin.html:64
+msgid "Battery:"
+msgstr "Batterie :"
+
+#: devices/templates/devices/device_admin.html:69
 msgid "Capabilities"
 msgstr "Capacités"
 
-#: devices/templates/devices/device_admin.html:45
+#: devices/templates/devices/device_admin.html:71
 msgid "Publish interval:"
 msgstr "Intervalle de publication :"
 
-#: devices/templates/devices/device_admin.html:48
+#: devices/templates/devices/device_admin.html:74
 msgid "Metrics:"
 msgstr "Métriques :"
 
-#: devices/templates/devices/device_admin.html:51
+#: devices/templates/devices/device_admin.html:77
 msgid "Metric"
 msgstr "Métrique"
 
-#: devices/templates/devices/device_admin.html:51
+#: devices/templates/devices/device_admin.html:77
 msgid "Unit"
 msgstr "Unité"
 
-#: devices/templates/devices/device_admin.html:64
+#: devices/templates/devices/device_admin.html:90
 msgid "Accepted commands:"
 msgstr "Commandes acceptées :"
 
-#: devices/templates/devices/device_admin.html:67
+#: devices/templates/devices/device_admin.html:93
 msgid "Parameters"
 msgstr "Paramètres"
 
-#: devices/templates/devices/device_admin.html:90
+#: devices/templates/devices/device_admin.html:116
 msgid "Guest-visible metrics:"
 msgstr "Mesures visibles par les invités :"
 
-#: devices/templates/devices/device_admin.html:98
+#: devices/templates/devices/device_admin.html:124
 msgid "Request capabilities"
 msgstr "Demander les capacités"
 
-#: devices/templates/devices/device_admin.html:105
+#: devices/templates/devices/device_admin.html:131
 msgid "Calibration"
 msgstr "Calibration"
 
-#: devices/templates/devices/device_admin.html:106
+#: devices/templates/devices/device_admin.html:132
 msgid "Adjust sensor offsets. The value is added to the raw reading."
 msgstr ""
 "Ajuster les offsets des capteurs. La valeur est ajoutée à la mesure brute."
 
-#: devices/templates/devices/device_admin.html:118
+#: devices/templates/devices/device_admin.html:144
 #: devices/templates/devices/device_history.html:89
 #: readings/templates/readings/overview.html:69
 msgid "Apply"
 msgstr "Appliquer"
 
-#: devices/templates/devices/device_admin.html:126
+#: devices/templates/devices/device_admin.html:152
 msgid "Request current offsets"
 msgstr "Demander les offsets actuels"
 
-#: devices/templates/devices/device_admin.html:135
+#: devices/templates/devices/device_admin.html:161
 msgid "Approve device"
 msgstr "Approuver l'appareil"
 
-#: devices/templates/devices/device_admin.html:139
+#: devices/templates/devices/device_admin.html:165
 msgid "Send command"
 msgstr "Envoyer une commande"
 
-#: devices/templates/devices/device_admin.html:144
+#: devices/templates/devices/device_admin.html:170
 msgid "Action:"
 msgstr "Action :"
 
-#: devices/templates/devices/device_admin.html:155
+#: devices/templates/devices/device_admin.html:181
 msgid "Parameters:"
 msgstr "Paramètres :"
 
-#: devices/templates/devices/device_admin.html:156
+#: devices/templates/devices/device_admin.html:182
 msgid "value1, value2, ..."
 msgstr "valeur1, valeur2, ..."
 
-#: devices/templates/devices/device_admin.html:158
+#: devices/templates/devices/device_admin.html:184
 msgid "Send"
 msgstr "Envoyer"
 
-#: devices/templates/devices/device_admin.html:165
+#: devices/templates/devices/device_admin.html:191
 msgid "Command history"
 msgstr "Historique des commandes"
 
-#: devices/templates/devices/device_admin.html:172
+#: devices/templates/devices/device_admin.html:198
 msgid "Danger zone"
 msgstr "Zone de danger"
 
-#: devices/templates/devices/device_admin.html:177
+#: devices/templates/devices/device_admin.html:203
 msgid "Revoke approval"
 msgstr "Révoquer l'approbation"
 
-#: devices/templates/devices/device_admin.html:180
+#: devices/templates/devices/device_admin.html:206
 #: devices/templates/devices/device_delete_confirm.html:3
 #: devices/templates/devices/device_delete_confirm.html:6
 msgid "Delete device"
 msgstr "Supprimer l'appareil"
 
-#: devices/templates/devices/device_admin.html:199
+#: devices/templates/devices/device_admin.html:225
 msgid "Expected:"
 msgstr "Attendu :"
 

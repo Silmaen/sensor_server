@@ -116,6 +116,12 @@ def devices_view(request):
             "is_online": d.is_online,
             "last_seen": d.last_seen.isoformat() if d.last_seen else None,
             "publish_interval": d.publish_interval,
+            "hardware_id": d.hardware_id,
+            "hw_code": d.hw_code,
+            "fw_version": d.fw_version,
+            "battery_percent": d.battery_percent,
+            "battery_status": d.battery_status,
+            "needs_firmware_update": d.needs_firmware_update,
             "metrics": caps.get("metrics", []),
             "units": caps.get("units", {}),
         })

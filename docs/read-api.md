@@ -80,12 +80,28 @@ List approved devices with their advertised metrics and units.
       "is_online": true,
       "last_seen": "2026-07-06T15:16:10.756345+00:00",
       "publish_interval": 300,
+      "hardware_id": "ESP-00A1B2",
+      "hw_code": "esp8266-bme280-bat",
+      "fw_version": "1.2.0",
+      "battery_percent": 80.0,
+      "battery_status": "ok",
+      "needs_firmware_update": false,
       "metrics": ["temperature", "humidity"],
       "units": {"temperature": "°C", "humidity": "%"}
     }
   ]
 }
 ```
+
+Health fields:
+
+- `hardware_id` — per-unit chip serial; `hw_code` — hardware class code;
+  `fw_version` — firmware version (semver). Empty strings if not reported.
+- `battery_percent` — latest reported state of charge (or `null`).
+- `battery_status` — `"ok"`, `"low"` (≤20%), `"critical"` (≤5%), or `null`
+  when no battery reading exists.
+- `needs_firmware_update` — `true` when the device reports no `hw_code`/
+  `fw_version`, indicating outdated firmware.
 
 ### `GET /api/v1/readings/`
 

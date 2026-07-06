@@ -12,6 +12,14 @@
         {% else %}
         <span id="alert-{{ device.device_id }}" class="badge" style="display:none;"></span>
         {% endif %}
+        {% if device.battery_status == 'critical' %}
+        <span class="badge badge-error" title="{{ device.battery_percent }}%">🪫 {% trans "critical battery" %}</span>
+        {% elif device.battery_status == 'low' %}
+        <span class="badge badge-warning" title="{{ device.battery_percent }}%">🪫 {% trans "low battery" %}</span>
+        {% endif %}
+        {% if device.needs_firmware_update %}
+        <span class="badge badge-warning" title="{% trans 'Device reports no firmware version — update recommended' %}">⬆ {% trans "firmware update" %}</span>
+        {% endif %}
     </h4>
     <small>
         {{ device.device_type }} &mdash; {% if device.location %}{{ device.location }}{% else %}{% trans "Location not set" %}{% endif %}
