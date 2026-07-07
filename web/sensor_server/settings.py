@@ -99,7 +99,12 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [REDIS_URL],
+            # channels_redis polls the channel with a 5s blocking BZPOPMIN.
+            # redis-py 8 defaults socket_timeout to 5s — exactly equal — so an
+            # idle read races the blocking pop and raises "Timeout reading from
+            # redis", crashing the WebSocket consumer. Give the socket read a
+            # margin above the 5s pop so idle polls complete cleanly.
+            "hosts": [{"address": REDIS_URL, "socket_timeout": 30}],
         },
     },
 }
