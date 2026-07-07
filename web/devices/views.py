@@ -5,7 +5,6 @@ import re
 from django.db import connection, transaction
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from accounts.decorators import role_required
@@ -302,15 +301,9 @@ def device_request_capabilities_view(request, device_id):
     if request.method != "POST":
         return HttpResponseBadRequest()
 
-    request_capabilities(device)
-
-    CommandLog.objects.create(
-        device=device,
-        command={"action": "request_capabilities"},
-        sent_by=request.user,
-        acked=True,
-        acked_at=timezone.now(),
-    )
+    # Logged as a pending command; resolved to success/timeout when the device
+    # responds on the capabilities topic (or the capabilities timeout fires).
+    request_capabilities(device, sent_by=request.user, log_command=True)
 
     if request.headers.get("HX-Request"):
         commands = device.commands.select_related("sent_by")[:20]

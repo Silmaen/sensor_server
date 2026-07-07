@@ -7,7 +7,7 @@
             <th>{% trans "Date" %}</th>
             <th>{% trans "Command" %}</th>
             <th>{% trans "By" %}</th>
-            <th>{% trans "ACK" %}</th>
+            <th>{% trans "Status" %}</th>
             {% if user|has_role:"admin" %}
             <th></th>
             {% endif %}
@@ -19,7 +19,13 @@
             <td>{{ cmd.sent_at|date:"Y-m-d H:i:s" }}</td>
             <td><code>{{ cmd.command }}</code></td>
             <td>{{ cmd.sent_by.username|default:"-" }}</td>
-            <td>{% if cmd.acked %}{% trans "Yes" %}{% else %}{% trans "No" %}{% endif %}</td>
+            <td>
+                <span class="badge {% if cmd.status == 'success' %}badge-online{% elif cmd.status == 'failed' %}badge-error{% elif cmd.status == 'timeout' %}badge-warning{% endif %}">
+                    {% if cmd.status == 'success' %}✓{% elif cmd.status == 'failed' %}✗{% elif cmd.status == 'timeout' %}⌛{% else %}⏳{% endif %}
+                    {{ cmd.get_status_display }}
+                </span>
+                {% if cmd.response_message %}<br><small>{{ cmd.response_message }}</small>{% endif %}
+            </td>
             {% if user|has_role:"admin" %}
             <td>
                 <form hx-post="{% url 'devices:delete_command' device.device_id cmd.id %}" hx-target="#command-log" hx-swap="innerHTML" hx-confirm="{% trans 'Delete this command?' %}" style="margin:0;">

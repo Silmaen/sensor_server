@@ -190,10 +190,24 @@ Each entry in a `cmds` params array is an object with:
 {"action": "set_interval", "status": "ok"}
 ```
 
-| Field    | Type   | Required | Description                                      |
-|----------|--------|:--------:|--------------------------------------------------|
-| `action` | string |   Yes    | The command action being acknowledged.           |
-| `status` | string |   Yes    | `"ok"` (command executed) or `"error"` (failed). |
+| Field     | Type   | Required | Description                                      |
+|-----------|--------|:--------:|--------------------------------------------------|
+| `action`  | string |   Yes    | The command action being acknowledged.           |
+| `status`  | string |   Yes    | `"ok"` (command executed) or `"error"` (failed). |
+| `message` | string |    No    | Optional detail, recorded on failure (max 256 chars). |
+
+**Command lifecycle tracking:** the server records the state of every command
+it sends in `CommandLog.status`:
+
+| Status    | Meaning                                                              |
+|-----------|---------------------------------------------------------------------|
+| `pending` | Sent, awaiting acknowledgement (re-sent on the next wake if asleep). |
+| `success` | Device acked with `"ok"` — or, for `request_capabilities`, capabilities were received. |
+| `failed`  | Device acked with `"error"`; `message` is stored as `response_message`. |
+| `timeout` | No response within the capabilities timeout window.                 |
+
+The status (and any message) is shown as a badge in the device admin command
+log, so an operator can see exactly what became of each command.
 
 **Server behavior:**
 - Finds the most recent unacknowledged `CommandLog` entry matching the device and action.

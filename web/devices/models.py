@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 
 ALERT_LEVEL_CHOICES = [
@@ -135,6 +136,19 @@ class DeviceStatusLog(models.Model):
 
 
 class CommandLog(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_SUCCESS = "success"
+    STATUS_FAILED = "failed"
+    STATUS_TIMEOUT = "timeout"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, _("Pending")),
+        (STATUS_SUCCESS, _("Success")),
+        (STATUS_FAILED, _("Failed")),
+        (STATUS_TIMEOUT, _("Timeout")),
+    ]
+    # Terminal states: the command lifecycle has concluded.
+    TERMINAL_STATUSES = (STATUS_SUCCESS, STATUS_FAILED, STATUS_TIMEOUT)
+
     device = models.ForeignKey(
         Device, on_delete=models.CASCADE, related_name="commands"
     )
@@ -143,6 +157,12 @@ class CommandLog(models.Model):
     sent_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True
     )
+    status = models.CharField(
+        max_length=16, choices=STATUS_CHOICES, default=STATUS_PENDING
+    )
+    response_message = models.CharField(max_length=256, blank=True, default="")
+    # acked stays True once the command reaches any terminal state (kept for
+    # the wake-up flush query, which re-sends only still-pending commands).
     acked = models.BooleanField(default=False)
     acked_at = models.DateTimeField(null=True, blank=True)
 
@@ -150,4 +170,16 @@ class CommandLog(models.Model):
         ordering = ["-sent_at"]
 
     def __str__(self):
-        return f"{self.device_id} @ {self.sent_at:%Y-%m-%d %H:%M}"
+        return f"{self.device_id} {self.action or '-'} [{self.status}] @ {self.sent_at:%Y-%m-%d %H:%M}"
+
+    @property
+    def action(self):
+        return (self.command or {}).get("action", "")
+
+    def mark(self, status, message="", when=None):
+        """Move the command to a terminal state and record an optional message."""
+        self.status = status
+        self.response_message = (message or "")[:256]
+        self.acked = status in self.TERMINAL_STATUSES
+        self.acked_at = when or timezone.now()
+        self.save(update_fields=["status", "response_message", "acked", "acked_at"])

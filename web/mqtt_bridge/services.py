@@ -52,12 +52,18 @@ def parse_topic(topic: str) -> tuple[str, str, str] | None:
     return device_type, device_id, msg_type
 
 
-def _mqtt_publish(topic: str, payload: str, retain: bool = False):
-    """Publish a single MQTT message."""
-    logger.info("MQTT >> %s %s (retain=%s)", topic, payload, retain)
+def _mqtt_publish(topic: str, payload: str, retain: bool = False, qos: int = 0):
+    """Publish a single MQTT message.
+
+    qos=1 lets the broker queue the message for a device that is currently
+    offline but holds a persistent session (deep-sleep nodes), delivering it
+    on the next reconnect. Use qos=1 for commands to sleeping devices.
+    """
+    logger.info("MQTT >> %s %s (retain=%s qos=%s)", topic, payload, retain, qos)
     mqtt_publish.single(
         topic,
         payload=payload,
+        qos=qos,
         hostname=settings.MQTT_HOST,
         port=settings.MQTT_PORT,
         auth={"username": settings.MQTT_USER, "password": settings.MQTT_PASSWORD},
@@ -65,16 +71,52 @@ def _mqtt_publish(topic: str, payload: str, retain: bool = False):
     )
 
 
-def request_capabilities(device: Device):
-    """Send a request_capabilities command to a device via MQTT."""
+def request_capabilities(device: Device, sent_by=None, log_command: bool = False):
+    """Send a request_capabilities command to a device via MQTT.
+
+    When ``log_command`` is set, a pending CommandLog entry is created so the
+    request's lifecycle (pending → success/timeout) is visible in the UI. The
+    response arrives on the capabilities topic, not as an ack, so it is
+    resolved by handle_capabilities_message / the capabilities timeout check.
+    """
     topic = f"{device.device_type}/{device.device_id}/command"
     payload = json.dumps({"action": "request_capabilities"})
     try:
-        _mqtt_publish(topic, payload, retain=False)
+        # qos=1 so the broker queues it for deep-sleep devices (persistent
+        # session) and delivers it on their next wake. retain=False: it is a
+        # one-shot request, not a standing command. Idempotent if re-delivered.
+        _mqtt_publish(topic, payload, retain=False, qos=1)
         device.capabilities_requested_at = dj_timezone.now()
         device.save(update_fields=["capabilities_requested_at"])
+        if log_command:
+            CommandLog.objects.create(
+                device=device,
+                command={"action": "request_capabilities"},
+                sent_by=sent_by,
+                status=CommandLog.STATUS_PENDING,
+            )
     except Exception:
         logger.exception("MQTT >> %s -> publish failed", topic)
+
+
+def _resolve_capability_requests(device, status, message="", when=None):
+    """Resolve all pending request_capabilities command logs for a device.
+
+    A single capabilities response (or timeout) satisfies every outstanding
+    capability request, so they are resolved together.
+    """
+    pending = CommandLog.objects.filter(
+        device=device,
+        status=CommandLog.STATUS_PENDING,
+        command__action="request_capabilities",
+    )
+    resolved = pending.update(
+        status=status,
+        response_message=(message or "")[:256],
+        acked=status in CommandLog.TERMINAL_STATUSES,
+        acked_at=when or dj_timezone.now(),
+    )
+    return resolved
 
 
 def flush_pending_commands(device: Device):
@@ -168,9 +210,12 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
         flush_pending_commands(device)
         request_capabilities(device)
     elif device.capabilities_requested_at is not None:
-        # Check for capabilities response timeout
+        # Check for capabilities response timeout. Deep-sleep devices only see
+        # a queued request on their next wake, so allow at least two publish
+        # intervals before flagging a missing response.
         elapsed = (now - device.capabilities_requested_at).total_seconds()
-        if elapsed > CAPABILITIES_RESPONSE_TIMEOUT:
+        timeout = max(CAPABILITIES_RESPONSE_TIMEOUT, 2 * (device.publish_interval or 0))
+        if elapsed > timeout:
             device.alert_level = "error"
             device.alert_message = "no_capabilities_response"
             device.capabilities_requested_at = None
@@ -178,6 +223,10 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
             DeviceStatusLog.objects.create(
                 time=now, device=device,
                 alert_level="error", alert_message="no_capabilities_response",
+            )
+            _resolve_capability_requests(
+                device, CommandLog.STATUS_TIMEOUT,
+                message=f"No response within {int(timeout)}s", when=now,
             )
             logger.warning("sensors %s/%s -> capabilities timeout (%.0fs elapsed)", device_type, device_id, elapsed)
 
@@ -396,6 +445,9 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
         "capabilities_requested_at", "alert_level", "alert_message",
     ])
 
+    # A capabilities response fulfils any outstanding request_capabilities.
+    _resolve_capability_requests(device, CommandLog.STATUS_SUCCESS)
+
 
 def handle_ack_message(device_type: str, device_id: str, payload: bytes):
     """Process a command acknowledgement from a device."""
@@ -441,18 +493,18 @@ def handle_ack_message(device_type: str, device_id: str, payload: bytes):
         logger.warning("ack %s/%s -> rejected (invalid format: action=%s status=%s)", device_type, device_id, action, status)
         return
 
-    # Find the most recent unacked command matching this action
+    # Find the most recent still-pending command matching this action
     cmd_log = (
         CommandLog.objects
-        .filter(device=device, acked=False, command__action=action)
+        .filter(device=device, status=CommandLog.STATUS_PENDING, command__action=action)
         .order_by("-sent_at")
         .first()
     )
     if cmd_log:
-        cmd_log.acked = True
-        cmd_log.acked_at = dj_timezone.now()
-        cmd_log.save(update_fields=["acked", "acked_at"])
+        new_status = CommandLog.STATUS_SUCCESS if status == "ok" else CommandLog.STATUS_FAILED
+        message = data.get("message", "")
+        cmd_log.mark(new_status, message if isinstance(message, str) else "")
         delay = (cmd_log.acked_at - cmd_log.sent_at).total_seconds()
-        logger.info("ack %s/%s -> matched command #%d (%s) status=%s delay=%.1fs", device_type, device_id, cmd_log.pk, action, status, delay)
+        logger.info("ack %s/%s -> matched command #%d (%s) status=%s delay=%.1fs", device_type, device_id, cmd_log.pk, action, new_status, delay)
     else:
         logger.warning("ack %s/%s -> no matching pending command for action=%s", device_type, device_id, action)

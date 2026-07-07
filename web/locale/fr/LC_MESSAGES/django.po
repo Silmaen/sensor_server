@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sensor_server 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-06 21:30+0200\n"
+"POT-Creation-Date: 2026-07-06 23:28+0200\n"
 "PO-Revision-Date: 2026-03-17 00:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
@@ -255,6 +255,22 @@ msgstr "En ligne"
 msgid "Offline"
 msgstr "Hors ligne"
 
+#: devices/models.py:144
+msgid "Pending"
+msgstr "En attente"
+
+#: devices/models.py:145
+msgid "Success"
+msgstr "Succès"
+
+#: devices/models.py:146
+msgid "Failed"
+msgstr "Échec"
+
+#: devices/models.py:147
+msgid "Timeout"
+msgstr "Délai dépassé"
+
 #: devices/templates/devices/_command_log.html:7
 msgid "Date"
 msgstr "Date"
@@ -269,30 +285,23 @@ msgid "By"
 msgstr "Par"
 
 #: devices/templates/devices/_command_log.html:10
-msgid "ACK"
-msgstr "ACK"
+#: devices/templates/devices/_device_tables.html:49
+msgid "Status"
+msgstr "Statut"
 
-#: devices/templates/devices/_command_log.html:22
-msgid "Yes"
-msgstr "Oui"
-
-#: devices/templates/devices/_command_log.html:22
-msgid "No"
-msgstr "Non"
-
-#: devices/templates/devices/_command_log.html:25
+#: devices/templates/devices/_command_log.html:31
 msgid "Delete this command?"
 msgstr "Supprimer cette commande ?"
 
-#: devices/templates/devices/_command_log.html:37
+#: devices/templates/devices/_command_log.html:43
 msgid "Delete all command history?"
 msgstr "Supprimer tout l'historique des commandes ?"
 
-#: devices/templates/devices/_command_log.html:39
+#: devices/templates/devices/_command_log.html:45
 msgid "Clear all"
 msgstr "Tout effacer"
 
-#: devices/templates/devices/_command_log.html:43
+#: devices/templates/devices/_command_log.html:49
 msgid "No commands sent."
 msgstr "Aucune commande envoyée."
 
@@ -325,7 +334,8 @@ msgstr "batterie faible"
 #: devices/templates/devices/_device_card.html:21
 #: devices/templates/devices/_device_tables.html:81
 msgid "Device reports no firmware version — update recommended"
-msgstr "L'appareil ne signale aucune version de firmware — mise à jour recommandée"
+msgstr ""
+"L'appareil ne signale aucune version de firmware — mise à jour recommandée"
 
 #: devices/templates/devices/_device_card.html:21
 #: devices/templates/devices/_device_tables.html:81
@@ -385,10 +395,6 @@ msgstr "Appareils approuvés"
 #: devices/templates/devices/device_edit.html:14
 msgid "Location"
 msgstr "Emplacement"
-
-#: devices/templates/devices/_device_tables.html:49
-msgid "Status"
-msgstr "Statut"
 
 #: devices/templates/devices/_device_tables.html:100
 #: readings/templates/readings/_dashboard_cards.html:24
@@ -806,39 +812,39 @@ msgstr "<strong>%(name)s</strong> sera supprimé après la fusion."
 msgid "Merge"
 msgstr "Fusionner"
 
-#: devices/views.py:100 readings/metrics.py:11
+#: devices/views.py:99 readings/metrics.py:11
 msgid "Temperature"
 msgstr "Température"
 
-#: devices/views.py:101 readings/metrics.py:12
+#: devices/views.py:100 readings/metrics.py:12
 msgid "Humidity"
 msgstr "Humidité"
 
-#: devices/views.py:102 readings/metrics.py:13
+#: devices/views.py:101 readings/metrics.py:13
 msgid "Pressure"
 msgstr "Pression"
 
-#: devices/views.py:172
+#: devices/views.py:171
 msgid "Invalid metric."
 msgstr "Métrique invalide."
 
-#: devices/views.py:177
+#: devices/views.py:176
 msgid "Invalid value."
 msgstr "Valeur invalide."
 
-#: devices/views.py:186 devices/views.py:229
+#: devices/views.py:185 devices/views.py:228
 msgid "MQTT publish error."
 msgstr "Erreur d'envoi MQTT."
 
-#: devices/views.py:215
+#: devices/views.py:214
 msgid "Empty command."
 msgstr "Commande vide."
 
-#: devices/views.py:352
+#: devices/views.py:345
 msgid "Device ID cannot be empty."
 msgstr "L'ID de l'appareil ne peut pas être vide."
 
-#: devices/views.py:357
+#: devices/views.py:350
 msgid "Device ID may only contain letters, digits, hyphens, and underscores."
 msgstr ""
 "L'ID de l'appareil ne peut contenir que des lettres, chiffres, tirets et "
@@ -906,6 +912,15 @@ msgstr "Utilisateurs"
 #: templates/base.html:107 templates/base.html:115
 msgid "Log out"
 msgstr "Déconnexion"
+
+#~ msgid "ACK"
+#~ msgstr "ACK"
+
+#~ msgid "Yes"
+#~ msgstr "Oui"
+
+#~ msgid "No"
+#~ msgstr "Non"
 
 #~ msgid "Period:"
 #~ msgstr "Période :"

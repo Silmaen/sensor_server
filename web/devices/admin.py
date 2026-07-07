@@ -38,5 +38,6 @@ class DeviceAdmin(admin.ModelAdmin):
 
 @admin.register(CommandLog)
 class CommandLogAdmin(admin.ModelAdmin):
-    list_display = ("device", "sent_at", "sent_by", "acked")
-    list_filter = ("acked",)
+    list_display = ("device", "action", "sent_at", "sent_by", "status", "acked_at")
+    list_filter = ("status",)
+    search_fields = ("device__device_id", "response_message")

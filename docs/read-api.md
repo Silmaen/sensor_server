@@ -151,11 +151,11 @@ Query params: `resolution` (`hourly` | `daily`, default `hourly`), `device_id`,
 
 ## Error responses
 
-| Status | Body `error`   | When                                            |
-|--------|----------------|-------------------------------------------------|
+| Status | Body `error`   | When                                                  |
+|--------|----------------|-------------------------------------------------------|
 | `400`  | `bad_request`  | Invalid timestamps, span too large, bad `resolution`. |
-| `401`  | `unauthorized` | Missing, invalid, or inactive API key.          |
-| `404`  | `not_found`    | `device_id` is unknown or not approved.         |
+| `401`  | `unauthorized` | Missing, invalid, or inactive API key.                |
+| `404`  | `not_found`    | `device_id` is unknown or not approved.               |
 
 ## Example
 
