@@ -44,7 +44,13 @@
 </p>
 {% endif %}
 
-{% if device.needs_firmware_update %}
+{% if device.is_legacy_firmware %}
+<p class="alert-warning">
+    <span class="badge badge-legacy">🕰 {% trans "legacy" %}</span>
+    <strong>{% trans "Pre-OTA firmware." %}</strong>
+    {% trans "This device runs firmware from before the OTA rollout (no OTA support and no registered hardware code). Reflash it manually with a published firmware to enable over-the-air updates." %}
+</p>
+{% elif device.needs_firmware_update %}
 <p class="alert-warning">
     <strong>⬆ {% trans "Firmware update recommended." %}</strong>
     {% trans "This device does not report a hardware code or firmware version, which indicates outdated firmware." %}
@@ -54,8 +60,8 @@
 {% if device.hardware_id %}
 <p><strong>{% trans "Hardware ID:" %}</strong> <code>{{ device.hardware_id }}</code></p>
 {% endif %}
-{% if device.hw_code %}
-<p><strong>{% trans "Hardware code:" %}</strong> <code>{{ device.hw_code }}</code></p>
+{% if device.hardware_code %}
+<p><strong>{% trans "Hardware code:" %}</strong> <code>{{ device.hardware_code }}</code>{% if device.hw_rev %} <small>rev{{ device.hw_rev }}</small>{% endif %}</p>
 {% endif %}
 {% if device.fw_version %}
 <p><strong>{% trans "Firmware version:" %}</strong> <code>{{ device.fw_version }}</code></p>
@@ -151,6 +157,29 @@
         <input type="hidden" name="command" value='{"action":"request_calibration"}'>
         <button type="submit" class="outline btn-sm">{% trans "Request current offsets" %}</button>
     </form>
+</details>
+{% endif %}
+
+{% if device.ota_capable %}
+<details open>
+    <summary>{% trans "Firmware (OTA)" %}</summary>
+    {% if ota_firmwares %}
+    <p><small>{% trans "Push a compatible firmware image to this device over the air." %}</small></p>
+    <form hx-post="{% url 'devices:ota_push' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML"
+          hx-confirm="{% trans 'Push this firmware to the device?' %}" style="margin:0;">
+        {% csrf_token %}
+        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+            <select name="firmware_id" required style="margin:0;">
+                {% for fw in ota_firmwares %}
+                <option value="{{ fw.pk }}">{{ fw.hardware_revision.hardware_code_id }} rev{{ fw.hw_rev }} — v{{ fw.version }}{% if fw.version == device.fw_version %} ({% trans "current" %}){% endif %}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="outline btn-sm">{% trans "Push firmware" %}</button>
+        </div>
+    </form>
+    {% else %}
+    <p><small>{% trans "No compatible firmware has been published for this device's hardware yet." %}</small></p>
+    {% endif %}
 </details>
 {% endif %}
 

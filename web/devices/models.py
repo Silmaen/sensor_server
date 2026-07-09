@@ -40,9 +40,26 @@ class Device(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_approved = models.BooleanField(default=False)
     hardware_id = models.CharField(max_length=256, blank=True, default="")
-    # Hardware code (shared across identical hardware) and firmware version,
-    # reported in the capabilities message. Absence signals outdated firmware.
-    hw_code = models.CharField(max_length=64, blank=True, default="")
+    # Resolved hardware type: FK to the CI-fed registry, set only when the code
+    # reported in capabilities exists in it. NULL (unknown/unpublished code, or
+    # no code at all) means the device is flagged for a firmware update. The raw
+    # claimed code is not retained (see docs/ota-server.md §1.4).
+    hardware_code = models.ForeignKey(
+        "ota.HardwareCode",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="devices",
+    )
+    # Hardware revision (physical/electrical) reported in capabilities. Kept as
+    # a plain int (no native composite FK to HardwareRevision).
+    hw_rev = models.PositiveSmallIntegerField(null=True, blank=True)
+    # Whether the device advertises OTA support (capabilities `ota`). The push
+    # UI is offered only for OTA-capable devices.
+    ota_capable = models.BooleanField(default=False)
+    # Server-side calibration mirror (per device_id), admin-editable. Re-pushed
+    # to the device after a store wipe (capabilities `cal: 0`).
+    calibration = models.JSONField(default=dict, blank=True)
     fw_version = models.CharField(max_length=32, blank=True, default="")
     # Latest reported battery state of charge (percent), for low-battery alerts.
     battery_percent = models.FloatField(null=True, blank=True)
@@ -106,15 +123,29 @@ class Device(models.Model):
 
     @property
     def needs_firmware_update(self):
-        """True when the device runs firmware too old to advertise hw/fw.
+        """True when the device runs firmware too old or un-published.
 
-        A device that has answered a capabilities request but reports neither a
-        hardware code nor a firmware version is assumed to run outdated
-        firmware, so an update is recommended.
+        A device that has answered a capabilities request but whose hardware
+        code does not resolve in the CI-fed registry (unknown or absent), or
+        that reports no firmware version, is flagged for a firmware update.
+        These causes are not distinguished (single generic state).
         """
         if not self.has_reported_capabilities:
             return False
-        return not self.hw_code or not self.fw_version
+        return self.hardware_code_id is None or not self.fw_version
+
+    @property
+    def is_legacy_firmware(self):
+        """True for a device running pre-OTA firmware.
+
+        It has answered a capabilities request but advertises neither OTA support
+        nor a hardware code known to the registry — firmware from before the OTA
+        rollout, which must be reflashed manually. Distinct from a device merely
+        awaiting a published image (which does advertise OTA capability).
+        """
+        if not self.has_reported_capabilities:
+            return False
+        return not self.ota_capable and self.hardware_code_id is None
 
 
 class DeviceStatusLog(models.Model):

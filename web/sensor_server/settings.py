@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "readings",
     "mqtt_bridge",
     "api",
+    "ota",
 ]
 
 MIDDLEWARE = [
@@ -140,6 +141,18 @@ OIDC_CREATE_USER = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Media — firmware images (OTA), Django media. Persistent under DATA_DIR via a
+# bind mount (wired in docker-compose); served by nginx (static + media), never
+# WhiteNoise. See docs/ota-server.md.
+MEDIA_URL = "media/"
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", BASE_DIR / "media"))
+
+# OTA — firmware publication token (CI-only Bearer auth, distinct from api.ApiKey;
+# empty disables publication) and the LAN-reachable base URL used to build the
+# ota_update `value` (firmware served at <OTA_BASE_URL>/fw/<hw>/<rev>/<version>.bin).
+OTA_PUBLISH_TOKEN = os.environ.get("OTA_PUBLISH_TOKEN", "")
+OTA_BASE_URL = os.environ.get("OTA_BASE_URL", "").rstrip("/")
 
 # Internationalization
 LANGUAGE_CODE = "en"

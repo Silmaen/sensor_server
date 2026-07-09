@@ -21,4 +21,11 @@
 ## Infrastructure
 - TLS is handled by an external reverse proxy. This app runs HTTP only.
 - SECURE_PROXY_SSL_HEADER is always active (not gated on DEBUG).
-- Do NOT add nginx, TLS termination, or HTTPS redirect to this project.
+- nginx MAY be added to the stack to serve Django **static and media** from disk
+  (standard Django deployment). Media includes the OTA firmware images (`.bin`).
+  Do NOT use it for TLS termination or an HTTPS redirect (TLS stays external).
+- Firmware images (OTA) are media, served by nginx (`location /fw/`, from the
+  firmware media directory that the publication API writes to). The download
+  is unauthenticated by protocol design (trusted filtered LAN, plain HTTP + MD5;
+  the `ota_update` `value` URL carries no token) — an exception to the
+  authenticated-endpoints rule alongside `/healthz/`.

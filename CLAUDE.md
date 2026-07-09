@@ -9,14 +9,14 @@ stores time-series in TimescaleDB, serves a real-time dashboard with device cont
 
 ## Stack
 
-- **Docker Compose**: mosquitto, timescaledb (pg16), redis, web (Django 5.x / Daphne), nginx
-- **Django apps**: `accounts` (auth/roles/OIDC), `devices` (registry/commands), `readings` (time-series/dashboard/WebSocket), `mqtt_bridge` (MQTT worker/auto-discovery), `api` (read-only HTTP API for external services)
+- **Docker Compose**: mosquitto, timescaledb (pg16), redis, web (Django 5.x / Daphne)
+- **Django apps**: `accounts` (auth/roles/OIDC), `devices` (registry/commands), `readings` (time-series/dashboard/WebSocket), `mqtt_bridge` (MQTT worker/auto-discovery), `api` (read-only HTTP API for external services), `ota` (hardware registry, firmware catalog, publication API, OTA push)
 - **Auth**: optional Authentik SSO via mozilla-django-oidc; local login fallback when `OIDC_RP_CLIENT_ID` is empty
 - **Real-time**: Django Channels WebSocket + HTMX ws extension
 - **Charts**: ECharts via CDN
 - **CSS**: Pico CSS via CDN — no build step
 - **i18n**: English (default) + French, `{% trans %}` / `gettext_lazy`, locale files in `web/locale/`
-- **Reverse proxy**: Nginx with optional TLS (`NGINX_CONF` env var switches between SSL and no-SSL config)
+- **Reverse proxy / TLS**: handled by an **external** reverse proxy (not in this repo); the app runs HTTP only. nginx may be added to the stack to serve Django **static + media** from disk (media includes OTA firmware `.bin`, exposed to devices at `/fw/`) — but never TLS. See `.claude/rules/architecture.md`.
 
 ## Commands
 

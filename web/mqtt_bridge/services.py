@@ -9,6 +9,7 @@ from django.conf import settings
 from django.utils import timezone as dj_timezone
 
 from devices.models import CAPABILITIES_RESPONSE_TIMEOUT, CommandLog, Device, DeviceStatusLog
+from ota.models import HardwareCode
 from readings.models import SensorReading
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,12 @@ MAX_METRIC_NAME_LEN = 64
 SAFE_IDENTIFIER_RE = re.compile(r"^[a-zA-Z0-9_\-]+$")
 # Firmware version accepts semver-style tokens (digits, dots, hyphens, plus).
 FW_VERSION_RE = re.compile(r"^[a-zA-Z0-9.\-+]+$")
+# Hardware code: exactly 8 uppercase alphanumerics (see ota.models).
+HW_CODE_RE = re.compile(r"^[A-Z0-9]{8}$")
+# Floor for the OTA confirmation window (scaled up by publish_interval): an OTA
+# needs delivery (≤ interval), download, flash, reboot and a fresh capabilities
+# cycle before success can be observed.
+OTA_UPDATE_TIMEOUT = 600
 
 # Aliases for compact metric names sent by firmware.
 # Maps short/alternate names to canonical metric names used in the database.
@@ -99,6 +106,92 @@ def request_capabilities(device: Device, sent_by=None, log_command: bool = False
         logger.exception("MQTT >> %s -> publish failed", topic)
 
 
+def request_commands(device: Device, sent_by=None):
+    """Ask a device to publish its command list on the commands topic.
+
+    Sent alongside request_capabilities: the two are split into separate messages
+    to fit the firmware's 512-byte MQTT packet limit. qos=1 so the broker queues
+    it for deep-sleep devices; the response arrives on the commands topic and is
+    handled by handle_commands_message.
+    """
+    topic = f"{device.device_type}/{device.device_id}/command"
+    payload = json.dumps({"action": "request_commands"})
+    try:
+        _mqtt_publish(topic, payload, retain=False, qos=1)
+    except Exception:
+        logger.exception("MQTT >> %s -> request_commands publish failed", topic)
+
+
+def _repush_calibration(device: Device):
+    """Re-push the mirrored calibration to a device that reports an empty store.
+
+    Triggered when a capabilities message carries ``cal: 0`` (store wiped: new
+    board, factory reset, chip swap) and a server-side mirror exists. Published
+    qos=1 so it is queued for deep-sleep devices. Not recorded as CommandLog
+    entries: this is an automatic server-side recovery, not a user command.
+    """
+    mirror = device.calibration or {}
+    topic = f"{device.device_type}/{device.device_id}/command"
+    count = 0
+    for key, value in mirror.items():
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            continue
+        # Offset keys (cal_temp/cal_humi/cal_press) go via set_offset on the bare
+        # metric name; everything else (bat_divider, …) via set_calibration.
+        if key.startswith("cal_"):
+            cmd = {"action": "set_offset", "metric": key[4:], "value": value}
+        else:
+            cmd = {"action": "set_calibration", "key": key, "value": value}
+        try:
+            _mqtt_publish(topic, json.dumps(cmd), retain=False, qos=1)
+            count += 1
+        except Exception:
+            logger.exception("MQTT >> %s -> calibration re-push failed (%s)", topic, key)
+    if count:
+        logger.info("re-push %s/%s -> %d calibration value(s) from mirror", device.device_type, device.device_id, count)
+
+
+def _resolve_ota_updates(device):
+    """Mark pending ota_update commands successful once the device runs the
+    pushed version.
+
+    OTA success is not acked (the device reboots); it is confirmed when the next
+    capabilities message carries the target ``ver``. Called from the capabilities
+    handler after ``fw_version`` has been updated.
+    """
+    pending = CommandLog.objects.filter(
+        device=device,
+        status=CommandLog.STATUS_PENDING,
+        command__action="ota_update",
+    )
+    for cmd in pending:
+        target = (cmd.command or {}).get("ver")
+        if target and device.fw_version == target:
+            cmd.mark(CommandLog.STATUS_SUCCESS, message=f"Running {target}")
+            logger.info("ota_update %s/%s -> success (fw=%s)", device.device_type, device.device_id, target)
+
+
+def _check_ota_timeouts(device, now):
+    """Time out pending ota_update commands that were never confirmed.
+
+    Success is confirmed by capabilities carrying the new fw and failure by an
+    error ack. If neither happens within the window — device never returned, or a
+    silent flash failure — the command is marked TIMEOUT. The window scales with
+    the publish interval so deep-sleep devices are given enough wake cycles.
+    """
+    timeout = max(OTA_UPDATE_TIMEOUT, 3 * (device.publish_interval or 0))
+    pending = CommandLog.objects.filter(
+        device=device,
+        status=CommandLog.STATUS_PENDING,
+        command__action="ota_update",
+    )
+    for cmd in pending:
+        elapsed = (now - cmd.sent_at).total_seconds()
+        if elapsed > timeout:
+            cmd.mark(CommandLog.STATUS_TIMEOUT, message=f"No confirmation within {int(timeout)}s", when=now)
+            logger.warning("ota_update %s/%s -> timeout (%.0fs elapsed)", device.device_type, device.device_id, elapsed)
+
+
 def _resolve_capability_requests(device, status, message="", when=None):
     """Resolve all pending request_capabilities command logs for a device.
 
@@ -126,9 +219,13 @@ def flush_pending_commands(device: Device):
     that only enable WiFi periodically). Commands are sent in chronological
     order so the device processes them in the same sequence they were issued.
     """
+    # ota_update is excluded: it is published QoS 1 (queued for the device's
+    # persistent session) and must stay retain=false — re-sending it via the
+    # retain=True flush would leave a stale retained image command on the broker.
     pending = (
         CommandLog.objects
         .filter(device=device, acked=False)
+        .exclude(command__action="ota_update")
         .order_by("sent_at")
     )
     if not pending.exists():
@@ -204,11 +301,15 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
 
     device.save(update_fields=update_fields)
 
+    # Fail pending OTA pushes that were never confirmed within the window.
+    _check_ota_timeouts(device, now)
+
     # On wake-up: flush pending commands, then request capabilities
     if created or not was_online:
         logger.info("sensors %s/%s -> device woke up (was_online=%s, created=%s)", device_type, device_id, was_online, created)
         flush_pending_commands(device)
         request_capabilities(device)
+        request_commands(device)
     elif device.capabilities_requested_at is not None:
         # Check for capabilities response timeout. Deep-sleep devices only see
         # a queued request on their next wake, so allow at least two publish
@@ -372,9 +473,26 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
 
     # hw/fw are optional: devices on outdated firmware omit them, which the
     # server surfaces as a recommended firmware update (Device.needs_firmware_update).
+    # The reported hw code is resolved against the CI-fed registry; an unknown
+    # or absent code leaves hardware_code NULL (the raw claim is not retained).
     hw_code = data.get("hw", "")
-    if isinstance(hw_code, str) and len(hw_code) <= 64 and (hw_code == "" or SAFE_IDENTIFIER_RE.match(hw_code)):
-        device.hw_code = hw_code
+    if isinstance(hw_code, str) and HW_CODE_RE.match(hw_code):
+        device.hardware_code = HardwareCode.objects.filter(pk=hw_code).first()
+    else:
+        device.hardware_code = None
+
+    hw_rev = data.get("hwrev")
+    if isinstance(hw_rev, int) and not isinstance(hw_rev, bool) and 0 <= hw_rev <= 65535:
+        device.hw_rev = hw_rev
+
+    ota = data.get("ota")
+    if isinstance(ota, bool) or (isinstance(ota, int) and ota in (0, 1)):
+        device.ota_capable = bool(ota)
+
+    # cal: calibration store-empty flag. 0 → wiped store (new board / factory
+    # reset / chip swap); the mirror, if any, is re-pushed after saving.
+    cal = data.get("cal")
+    store_empty = cal == 0 or cal is False
 
     fw_version = data.get("fw", "")
     if isinstance(fw_version, str) and len(fw_version) <= 32 and (fw_version == "" or FW_VERSION_RE.match(fw_version)):
@@ -433,20 +551,132 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
             alert_level="", alert_message="",
         )
     logger.info(
-        "capabilities %s/%s -> stored: id=%s hw=%s fw=%s interval=%s metrics=%s commands=%s (pending_request=%s, cleared_timeout=%s)",
+        "capabilities %s/%s -> stored: id=%s hw=%s rev=%s ota=%s fw=%s interval=%s metrics=%s commands=%s (pending_request=%s, cleared_timeout=%s)",
         device_type, device_id,
-        device.hardware_id, device.hw_code or "-", device.fw_version or "-",
+        device.hardware_id, device.hardware_code_id or "-", device.hw_rev,
+        device.ota_capable, device.fw_version or "-",
         device.publish_interval,
         capabilities.get("metrics"), capabilities.get("commands"),
         was_pending, had_timeout_alert,
     )
     device.save(update_fields=[
-        "hardware_id", "hw_code", "fw_version", "publish_interval", "capabilities",
-        "capabilities_requested_at", "alert_level", "alert_message",
+        "hardware_id", "hardware_code", "hw_rev", "ota_capable", "fw_version",
+        "publish_interval", "capabilities", "capabilities_requested_at",
+        "alert_level", "alert_message",
     ])
 
     # A capabilities response fulfils any outstanding request_capabilities.
     _resolve_capability_requests(device, CommandLog.STATUS_SUCCESS)
+
+    # An OTA succeeds silently (the device reboots and does not ack): a
+    # capabilities message carrying the pushed version confirms it.
+    _resolve_ota_updates(device)
+
+    # After a store wipe the device reports cal:0; re-push the mirrored
+    # calibration (per device_id) so it is restored (docs/ota-server.md §5.1).
+    if store_empty and device.calibration:
+        _repush_calibration(device)
+
+
+def handle_commands_message(device_type: str, device_id: str, payload: bytes):
+    """Process a command-list response (commands topic, answer to request_commands).
+
+    The advertised command list is stored inside ``Device.capabilities``
+    (``commands`` / ``command_params``): ``commands`` cannot be a Device field
+    because that name is the CommandLog reverse relation.
+    """
+    if len(payload) > MAX_PAYLOAD_SIZE:
+        logger.warning("commands %s/%s -> rejected (payload too large: %d bytes)", device_type, device_id, len(payload))
+        return
+
+    try:
+        data = json.loads(payload)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.warning("commands %s/%s -> rejected (invalid JSON)", device_type, device_id)
+        return
+
+    if not isinstance(data, dict):
+        logger.warning("commands %s/%s -> rejected (payload is not a JSON object)", device_type, device_id)
+        return
+
+    try:
+        device = Device.objects.get(device_id=device_id)
+    except Device.DoesNotExist:
+        logger.warning("commands %s/%s -> rejected (unknown device)", device_type, device_id)
+        return
+
+    commands = []
+    if isinstance(data.get("commands"), list):
+        commands = [
+            c for c in data["commands"]
+            if isinstance(c, str) and SAFE_IDENTIFIER_RE.match(c)
+        ]
+
+    # command_params: {"name": [{"name": ..., "type": ...}], ...}
+    valid_param_types = {"number", "string", "boolean"}
+    command_params = {}
+    if isinstance(data.get("command_params"), dict):
+        for cmd_name, params in data["command_params"].items():
+            if not isinstance(cmd_name, str) or not SAFE_IDENTIFIER_RE.match(cmd_name):
+                continue
+            if not isinstance(params, list):
+                continue
+            valid_params = []
+            for p in params:
+                if (isinstance(p, dict)
+                        and isinstance(p.get("name"), str)
+                        and isinstance(p.get("type"), str)
+                        and p["type"] in valid_param_types):
+                    valid_params.append({"name": p["name"], "type": p["type"]})
+            command_params[cmd_name] = valid_params
+
+    capabilities = device.capabilities or {}
+    capabilities["commands"] = commands
+    capabilities["command_params"] = command_params
+    device.capabilities = capabilities
+    device.last_seen = dj_timezone.now()
+    device.save(update_fields=["capabilities", "last_seen"])
+    logger.info("commands %s/%s -> stored %d command(s): %s", device_type, device_id, len(commands), commands)
+
+
+def handle_calibration_message(device_type: str, device_id: str, payload: bytes):
+    """Process a calibration report (calibration topic, answer to request_calibration).
+
+    Stores the device's current calibration as the server-side mirror
+    (Device.calibration), replacing any previous snapshot. Used to bootstrap the
+    mirror from an already-tuned unit; the mirror is re-pushed after a store wipe.
+    """
+    if len(payload) > MAX_PAYLOAD_SIZE:
+        logger.warning("calibration %s/%s -> rejected (payload too large: %d bytes)", device_type, device_id, len(payload))
+        return
+
+    try:
+        data = json.loads(payload)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.warning("calibration %s/%s -> rejected (invalid JSON)", device_type, device_id)
+        return
+
+    if not isinstance(data, dict):
+        logger.warning("calibration %s/%s -> rejected (payload is not a JSON object)", device_type, device_id)
+        return
+
+    try:
+        device = Device.objects.get(device_id=device_id)
+    except Device.DoesNotExist:
+        logger.warning("calibration %s/%s -> rejected (unknown device)", device_type, device_id)
+        return
+
+    mirror = {}
+    for key, value in data.items():
+        if (isinstance(key, str) and len(key) <= MAX_METRIC_NAME_LEN
+                and SAFE_IDENTIFIER_RE.match(key)
+                and isinstance(value, (int, float)) and not isinstance(value, bool)):
+            mirror[key] = round(float(value), 4)
+
+    device.calibration = mirror
+    device.last_seen = dj_timezone.now()
+    device.save(update_fields=["calibration", "last_seen"])
+    logger.info("calibration %s/%s -> mirror updated: %s", device_type, device_id, mirror)
 
 
 def handle_ack_message(device_type: str, device_id: str, payload: bytes):
@@ -487,6 +717,12 @@ def handle_ack_message(device_type: str, device_id: str, payload: bytes):
             device.config = config
             device.save(update_fields=["config"])
             logger.info("ack %s/%s -> stored calibration offsets: %s", device_type, device_id, calibration)
+        return
+
+    # OTA start: informational, published before flashing. Leave the ota_update
+    # command pending — success (new fw in capabilities) or an error ack resolves it.
+    if action == "ota_update" and status == "start":
+        logger.info("ack %s/%s -> ota_update start (device flashing)", device_type, device_id)
         return
 
     if not action or status not in ("ok", "error"):

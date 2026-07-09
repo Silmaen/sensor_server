@@ -8,7 +8,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 
 from accounts.decorators import role_required
-from mqtt_bridge.services import _mqtt_publish, request_capabilities
+from mqtt_bridge.services import _mqtt_publish, request_capabilities, request_commands
+from ota.services import OtaError, compatible_firmwares, send_ota_update
 from readings.metrics import get_metrics_display_map
 from readings.models import SensorReading
 
@@ -116,6 +117,9 @@ def device_admin_view(request, device_id):
         for key, label, unit in CALIBRATION_METRICS
     ] if has_calibration else []
 
+    # OTA: offer compatible firmwares only for OTA-capable devices.
+    ota_firmwares = list(compatible_firmwares(device)) if device.ota_capable else []
+
     return render(request, "devices/device_admin.html", {
         "device": device,
         "commands": commands,
@@ -124,7 +128,34 @@ def device_admin_view(request, device_id):
         "next_device_id": next_id,
         "has_calibration": has_calibration,
         "calibration_metrics": calibration_metrics,
+        "ota_firmwares": ota_firmwares,
     })
+
+
+@role_required("admin")
+def device_ota_push_view(request, device_id):
+    """Push a compatible firmware to a device (admin action)."""
+    device = get_object_or_404(Device, device_id=device_id)
+    if request.method != "POST":
+        return HttpResponseBadRequest()
+
+    firmware = compatible_firmwares(device).filter(pk=request.POST.get("firmware_id")).first()
+    if firmware is None:
+        return HttpResponseBadRequest(_("Unknown or incompatible firmware."))
+
+    try:
+        send_ota_update(device, firmware, sent_by=request.user)
+    except OtaError as exc:
+        logger.warning("ota push %s -> refused: %s", device_id, exc)
+        return HttpResponseBadRequest(str(exc))
+    except Exception:
+        logger.exception("Failed to publish ota_update to %s", device_id)
+        return HttpResponseBadRequest(_("MQTT publish error."))
+
+    if request.headers.get("HX-Request"):
+        commands = device.commands.select_related("sent_by")[:20]
+        return render(request, "devices/_command_log.html", {"commands": commands, "device": device})
+    return redirect("devices:admin", device_id=device.device_id)
 
 
 @role_required("admin")
@@ -304,6 +335,9 @@ def device_request_capabilities_view(request, device_id):
     # Logged as a pending command; resolved to success/timeout when the device
     # responds on the capabilities topic (or the capabilities timeout fires).
     request_capabilities(device, sent_by=request.user, log_command=True)
+    # The command list is a separate message (512-byte packet limit); request it
+    # too so the admin sees the full, up-to-date capabilities.
+    request_commands(device)
 
     if request.headers.get("HX-Request"):
         commands = device.commands.select_related("sent_by")[:20]
@@ -409,7 +443,10 @@ def _rename_device(device, new_id):
             last_seen=device.last_seen,
             is_approved=device.is_approved,
             hardware_id=device.hardware_id,
-            hw_code=device.hw_code,
+            hardware_code=device.hardware_code,
+            hw_rev=device.hw_rev,
+            ota_capable=device.ota_capable,
+            calibration=device.calibration,
             fw_version=device.fw_version,
             battery_percent=device.battery_percent,
             capabilities=device.capabilities,

@@ -9,12 +9,21 @@ from django.core.management.base import BaseCommand
 
 from mqtt_bridge.services import (
     handle_ack_message,
+    handle_calibration_message,
     handle_capabilities_message,
+    handle_commands_message,
     handle_sensor_message,
     handle_status_message,
     parse_topic,
 )
-from mqtt_bridge.topics import TOPIC_ACK, TOPIC_CAPABILITIES, TOPIC_SENSORS, TOPIC_STATUS
+from mqtt_bridge.topics import (
+    TOPIC_ACK,
+    TOPIC_CALIBRATION,
+    TOPIC_CAPABILITIES,
+    TOPIC_COMMANDS,
+    TOPIC_SENSORS,
+    TOPIC_STATUS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +66,8 @@ class Command(BaseCommand):
                 (TOPIC_SENSORS, 1),
                 (TOPIC_STATUS, 1),
                 (TOPIC_CAPABILITIES, 1),
+                (TOPIC_COMMANDS, 1),
+                (TOPIC_CALIBRATION, 1),
                 (TOPIC_ACK, 1),
             ]
             client.subscribe(topics)
@@ -78,6 +89,8 @@ class Command(BaseCommand):
             "sensors": handle_sensor_message,
             "status": handle_status_message,
             "capabilities": handle_capabilities_message,
+            "commands": handle_commands_message,
+            "calibration": handle_calibration_message,
             "ack": handle_ack_message,
         }
         handler = handlers.get(msg_type)

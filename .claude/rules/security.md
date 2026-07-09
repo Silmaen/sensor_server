@@ -13,4 +13,7 @@ paths:
 - User input rendered in JavaScript context must use `|escapejs`.
 - Open redirects must be prevented with `url_has_allowed_host_and_scheme`.
 - Query parameters (hours, days, etc.) must be bounded and validated.
-- The `/healthz/` endpoint is the only unauthenticated endpoint.
+- Unauthenticated endpoints are limited to: `/healthz/`, and the OTA firmware
+  download (served by nginx from disk; devices have no credentials — trusted
+  filtered LAN, HTTP + MD5 — see architecture.md). The publication API uses its
+  own `OTA_PUBLISH_TOKEN` Bearer auth, separate from the read-only `api.ApiKey`.

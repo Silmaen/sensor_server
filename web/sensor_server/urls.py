@@ -27,6 +27,7 @@ urlpatterns = [
     path("accounts/", include("accounts.urls")),
     path("devices/", include("devices.urls")),
     path("api/v1/", include("api.urls")),
+    path("api/", include("ota.urls")),
     path("", include("readings.urls")),
 ]
 
