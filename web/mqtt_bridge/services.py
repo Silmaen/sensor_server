@@ -502,7 +502,10 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
     if isinstance(publish_interval, (int, float)) and 0 < publish_interval <= 86400:
         device.publish_interval = int(publish_interval)
 
-    capabilities = {}
+    # Preserve commands/command_params posted by the separate `commands` message
+    # (this handler only refreshes identity + metrics; a capabilities refresh
+    # must not wipe the command list).
+    capabilities = device.capabilities or {}
 
     # metrics: {"name": "unit", ...} — merged metrics + units
     if isinstance(data.get("metrics"), dict):
@@ -612,7 +615,7 @@ def handle_commands_message(device_type: str, device_id: str, payload: bytes):
             if isinstance(c, str) and SAFE_IDENTIFIER_RE.match(c)
         ]
 
-    # command_params: {"name": [{"name": ..., "type": ...}], ...}
+    # Wire: command_params: {"cmd": [{"n": ..., "t": ...}], ...} (compact keys).
     valid_param_types = {"number", "string", "boolean"}
     command_params = {}
     if isinstance(data.get("command_params"), dict):
@@ -623,11 +626,13 @@ def handle_commands_message(device_type: str, device_id: str, payload: bytes):
                 continue
             valid_params = []
             for p in params:
+                # Device sends compact keys n/t (protocol §5.2); store the
+                # verbose form used internally / by the UI.
                 if (isinstance(p, dict)
-                        and isinstance(p.get("name"), str)
-                        and isinstance(p.get("type"), str)
-                        and p["type"] in valid_param_types):
-                    valid_params.append({"name": p["name"], "type": p["type"]})
+                        and isinstance(p.get("n"), str)
+                        and isinstance(p.get("t"), str)
+                        and p["t"] in valid_param_types):
+                    valid_params.append({"name": p["n"], "type": p["t"]})
             command_params[cmd_name] = valid_params
 
     capabilities = device.capabilities or {}
