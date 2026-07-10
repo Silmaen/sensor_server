@@ -122,6 +122,21 @@ def request_commands(device: Device, sent_by=None):
         logger.exception("MQTT >> %s -> request_commands publish failed", topic)
 
 
+def request_calibration(device: Device, sent_by=None):
+    """Ask a device to publish its current calibration on the calibration topic.
+
+    qos=1 (queued for deep-sleep devices), retain=False: this is a one-shot
+    request, not a standing command — it must not linger retained on the broker.
+    The response arrives on the calibration topic (handle_calibration_message).
+    """
+    topic = f"{device.device_type}/{device.device_id}/command"
+    payload = json.dumps({"action": "request_calibration"})
+    try:
+        _mqtt_publish(topic, payload, retain=False, qos=1)
+    except Exception:
+        logger.exception("MQTT >> %s -> request_calibration publish failed", topic)
+
+
 def _repush_calibration(device: Device):
     """Re-push the mirrored calibration to a device that reports an empty store.
 
@@ -235,7 +250,9 @@ def flush_pending_commands(device: Device):
     count = 0
     for cmd in pending:
         try:
-            _mqtt_publish(topic, json.dumps(cmd.command), retain=True)
+            # retain=False, qos=1: delivered via the persistent-session queue, not
+            # left retained (a retained command re-fires on every reconnect).
+            _mqtt_publish(topic, json.dumps(cmd.command), retain=False, qos=1)
             count += 1
         except Exception:
             logger.exception("MQTT >> %s -> flush failed for command #%d", topic, cmd.pk)
@@ -709,19 +726,21 @@ def handle_ack_message(device_type: str, device_id: str, payload: bytes):
     action = data.get("action", "")
     status = data.get("status", "")
 
-    # Calibration response: {"temp": ..., "humi": ..., "press": ...}
-    # Sent by the device in response to request_calibration, without action/status.
+    # Legacy calibration response (old firmware): {"temp":..,"humi":..,"press":..}
+    # sent as an ack without action/status. Merged into the unified calibration
+    # mirror (Device.calibration) with the cal_ prefix, alongside the dedicated
+    # calibration topic used by newer firmware.
     if not action and "temp" in data:
-        calibration = {}
+        updates = {}
         for key in ("temp", "humi", "press"):
-            if key in data and isinstance(data[key], (int, float)):
-                calibration[key] = round(float(data[key]), 2)
-        if calibration:
-            config = device.config or {}
-            config["calibration"] = calibration
-            device.config = config
-            device.save(update_fields=["config"])
-            logger.info("ack %s/%s -> stored calibration offsets: %s", device_type, device_id, calibration)
+            if key in data and isinstance(data[key], (int, float)) and not isinstance(data[key], bool):
+                updates["cal_" + key] = round(float(data[key]), 2)
+        if updates:
+            mirror = device.calibration or {}
+            mirror.update(updates)
+            device.calibration = mirror
+            device.save(update_fields=["calibration"])
+            logger.info("ack %s/%s -> stored calibration offsets (mirror): %s", device_type, device_id, updates)
         return
 
     # OTA start: informational, published before flashing. Leave the ota_update

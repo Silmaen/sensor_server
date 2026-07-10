@@ -8,7 +8,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 
 from accounts.decorators import role_required
-from mqtt_bridge.services import _mqtt_publish, request_capabilities, request_commands
+from mqtt_bridge.services import (
+    _mqtt_publish,
+    request_calibration,
+    request_capabilities,
+    request_commands,
+)
+from ota.models import HardwareRevision
 from ota.services import OtaError, compatible_firmwares, send_ota_update
 from readings.metrics import get_metrics_display_map
 from readings.models import SensorReading
@@ -110,12 +116,30 @@ def device_admin_view(request, device_id):
     command_params = (device.capabilities or {}).get("command_params", {})
     prev_id, next_id = _prev_next_device(device_id)
 
-    has_calibration = "set_offset" in (device.capabilities or {}).get("commands", [])
-    calibration = device.config.get("calibration", {}) if has_calibration else {}
+    # Calibration is read from the unified server-side mirror (Device.calibration).
+    # Offsets are stored under cal_<metric>; the battery divider under bat_divider.
+    device_commands = (device.capabilities or {}).get("commands", [])
+    mirror = device.calibration or {}
+    has_offset_calibration = "set_offset" in device_commands
+    has_set_calibration = "set_calibration" in device_commands
     calibration_metrics = [
-        {"key": key, "label": str(label), "unit": unit, "offset": calibration.get(key, 0.0)}
+        {"key": key, "label": str(label), "unit": unit, "offset": mirror.get("cal_" + key, 0.0)}
         for key, label, unit in CALIBRATION_METRICS
-    ] if has_calibration else []
+    ] if has_offset_calibration else []
+
+    # Battery voltage-divider calibration (set_calibration key=bat_divider), with
+    # the revision's nominal value as guidance.
+    bat_divider = None
+    if has_set_calibration:
+        nominal = None
+        if device.hardware_code_id and device.hw_rev is not None:
+            rev = HardwareRevision.objects.filter(
+                hardware_code_id=device.hardware_code_id, hw_rev=device.hw_rev
+            ).first()
+            nominal = rev.bat_divider_nominal if rev else None
+        bat_divider = {"value": mirror.get("bat_divider"), "nominal": nominal}
+
+    has_calibration = has_offset_calibration or has_set_calibration
 
     # OTA: offer compatible firmwares only for OTA-capable devices.
     ota_firmwares = list(compatible_firmwares(device)) if device.ota_capable else []
@@ -127,7 +151,11 @@ def device_admin_view(request, device_id):
         "prev_device_id": prev_id,
         "next_device_id": next_id,
         "has_calibration": has_calibration,
+        "has_offset_calibration": has_offset_calibration,
+        "has_set_calibration": has_set_calibration,
         "calibration_metrics": calibration_metrics,
+        "bat_divider": bat_divider,
+        "calibration_mirror": mirror,
         "ota_firmwares": ota_firmwares,
     })
 
@@ -189,9 +217,21 @@ def device_edit_view(request, device_id):
     })
 
 
+def _publish_calibration_command(device, command_data, user):
+    """Publish a calibration command and mirror the value server-side.
+
+    retain=False, qos=1: queued for deep-sleep devices via the persistent
+    session, never left retained. Logged as a CommandLog. The mirror
+    (Device.calibration) is updated so the server can re-push after a store wipe.
+    """
+    topic = f"{device.device_type}/{device.device_id}/command"
+    _mqtt_publish(topic, json.dumps(command_data), retain=False, qos=1)
+    CommandLog.objects.create(device=device, command=command_data, sent_by=user)
+
+
 @role_required("admin")
 def device_calibration_view(request, device_id):
-    """Set a calibration offset for a specific metric."""
+    """Set a sensor offset (set_offset) for a metric and mirror it."""
     device = get_object_or_404(Device, device_id=device_id)
     if request.method != "POST":
         return HttpResponseBadRequest()
@@ -202,35 +242,79 @@ def device_calibration_view(request, device_id):
         return HttpResponseBadRequest(_("Invalid metric."))
 
     try:
-        value = float(request.POST.get("value", "0"))
+        value = round(float(request.POST.get("value", "0")), 2)
     except (ValueError, TypeError):
         return HttpResponseBadRequest(_("Invalid value."))
 
-    # Send set_offset command to device
-    command_data = {"action": "set_offset", "metric": metric, "value": round(value, 2)}
-    topic = f"{device.device_type}/{device.device_id}/command"
+    command_data = {"action": "set_offset", "metric": metric, "value": value}
     try:
-        _mqtt_publish(topic, json.dumps(command_data), retain=True)
+        _publish_calibration_command(device, command_data, request.user)
     except Exception:
-        logger.exception("Failed to publish calibration command to %s", topic)
+        logger.exception("Failed to publish calibration command to %s", device.device_id)
         return HttpResponseBadRequest(_("MQTT publish error."))
 
-    CommandLog.objects.create(device=device, command=command_data, sent_by=request.user)
-
-    # Store offset server-side in device.config
-    config = device.config or {}
-    calibration = config.get("calibration", {})
-    calibration[metric] = round(value, 2)
-    config["calibration"] = calibration
-    device.config = config
-    device.save(update_fields=["config"])
+    # Update the unified mirror (offsets stored under cal_<metric>).
+    mirror = device.calibration or {}
+    mirror["cal_" + metric] = value
+    device.calibration = mirror
+    device.save(update_fields=["calibration"])
 
     if request.headers.get("HX-Request"):
         return render(request, "devices/_calibration_status.html", {
             "metric": metric,
-            "value": round(value, 2),
+            "value": value,
         })
+    return redirect("devices:admin", device_id=device.device_id)
 
+
+@role_required("admin")
+def device_set_calibration_view(request, device_id):
+    """Set a generic calibration value (set_calibration), e.g. bat_divider."""
+    device = get_object_or_404(Device, device_id=device_id)
+    if request.method != "POST":
+        return HttpResponseBadRequest()
+
+    key = request.POST.get("key", "").strip()
+    if not SAFE_IDENTIFIER_RE.match(key) or len(key) > 64:
+        return HttpResponseBadRequest(_("Invalid calibration key."))
+
+    try:
+        value = round(float(request.POST.get("value", "0")), 4)
+    except (ValueError, TypeError):
+        return HttpResponseBadRequest(_("Invalid value."))
+
+    command_data = {"action": "set_calibration", "key": key, "value": value}
+    try:
+        _publish_calibration_command(device, command_data, request.user)
+    except Exception:
+        logger.exception("Failed to publish set_calibration to %s", device.device_id)
+        return HttpResponseBadRequest(_("MQTT publish error."))
+
+    mirror = device.calibration or {}
+    mirror[key] = value
+    device.calibration = mirror
+    device.save(update_fields=["calibration"])
+
+    if request.headers.get("HX-Request"):
+        return render(request, "devices/_calibration_status.html", {
+            "metric": key,
+            "value": value,
+        })
+    return redirect("devices:admin", device_id=device.device_id)
+
+
+@role_required("admin")
+def device_request_calibration_view(request, device_id):
+    """Ask the device to report its current calibration (one-shot request)."""
+    device = get_object_or_404(Device, device_id=device_id)
+    if request.method != "POST":
+        return HttpResponseBadRequest()
+
+    request_calibration(device)
+
+    if request.headers.get("HX-Request"):
+        commands = device.commands.select_related("sent_by")[:20]
+        return render(request, "devices/_command_log.html", {"commands": commands, "device": device})
     return redirect("devices:admin", device_id=device.device_id)
 
 
@@ -253,7 +337,9 @@ def device_command_view(request, device_id):
     payload = json.dumps(command_data)
 
     try:
-        _mqtt_publish(topic, payload, retain=True)
+        # retain=False, qos=1: queued for deep-sleep devices via the persistent
+        # session; never retained (a retained command re-fires on every reconnect).
+        _mqtt_publish(topic, payload, retain=False, qos=1)
     except Exception:
         logger.exception("Failed to publish MQTT command to %s", topic)
         return HttpResponseBadRequest(_("MQTT publish error."))

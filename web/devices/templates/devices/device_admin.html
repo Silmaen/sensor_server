@@ -135,6 +135,8 @@
 {% if has_calibration %}
 <details open>
     <summary>{% trans "Calibration" %}</summary>
+
+    {% if has_offset_calibration %}
     <p><small>{% trans "Adjust sensor offsets. The value is added to the raw reading." %}</small></p>
     {% for m in calibration_metrics %}
     <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; flex-wrap:wrap;">
@@ -152,10 +154,36 @@
         <span id="calib-status-{{ m.key }}"></span>
     </div>
     {% endfor %}
-    <form id="request-calib-form" hx-post="{% url 'devices:command' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML" style="margin:0.5rem 0 0;">
+    {% endif %}
+
+    {% if has_set_calibration %}
+    <p style="margin-top:0.75rem;"><small>{% trans "Battery voltage-divider ratio (bat_divider)." %}
+        {% if bat_divider.nominal %}{% blocktrans with nominal=bat_divider.nominal %}Nominal for this revision: {{ nominal }}.{% endblocktrans %}{% endif %}</small></p>
+    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+        <strong style="min-width:8em;">{% trans "Battery divider" %}</strong>
+        <form hx-post="{% url 'devices:set_calibration' device.device_id %}"
+              hx-target="#calib-status-bat_divider" hx-swap="innerHTML"
+              style="display:inline-flex; align-items:center; gap:0.3rem; margin:0;">
+            {% csrf_token %}
+            <input type="hidden" name="key" value="bat_divider">
+            <input type="number" name="value" value="{{ bat_divider.value|default:bat_divider.nominal|default:'' }}" step="0.0001"
+                   placeholder="{{ bat_divider.nominal|default:'' }}"
+                   style="width:8em; margin:0; padding:0.2em 0.4em; font-size:0.9em;">
+            <button type="submit" class="outline btn-sm">{% trans "Apply" %}</button>
+        </form>
+        <span id="calib-status-bat_divider"></span>
+    </div>
+    {% endif %}
+
+    {% if calibration_mirror %}
+    <p style="margin-top:0.75rem;"><strong>{% trans "Server mirror:" %}</strong>
+        {% for k, v in calibration_mirror.items %}<code>{{ k }}={{ v }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}
+    </p>
+    {% endif %}
+
+    <form id="request-calib-form" hx-post="{% url 'devices:request_calibration' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML" style="margin:0.5rem 0 0;">
         {% csrf_token %}
-        <input type="hidden" name="command" value='{"action":"request_calibration"}'>
-        <button type="submit" class="outline btn-sm">{% trans "Request current offsets" %}</button>
+        <button type="submit" class="outline btn-sm">{% trans "Request current calibration" %}</button>
     </form>
 </details>
 {% endif %}
