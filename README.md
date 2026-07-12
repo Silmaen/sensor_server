@@ -121,6 +121,9 @@ sensor_server/
     devices/              # Device registry, approval, capabilities, commands
     readings/             # Sensor data, dashboard, charts, WebSocket
     mqtt_bridge/          # MQTT subscriber worker, auto-discovery, capabilities
+    api/                  # Read-only HTTP API (/api/v1/) for external services
+    ota/                  # Hardware registry, firmware catalog, publication API, OTA push
+    catalog/              # Designed-sensor documentation (Markdown), linked to hardware
     templates/            # Base layout
     locale/               # i18n translations (en, fr)
     static/               # Static assets

@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "mqtt_bridge",
     "api",
     "ota",
+    "catalog",
 ]
 
 MIDDLEWARE = [

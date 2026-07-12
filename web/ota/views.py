@@ -21,7 +21,10 @@ import re
 from django.core.files.base import File
 from django.db import transaction
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
+
+from accounts.decorators import role_required
 
 from .auth import publish_token_required
 from .models import Firmware, HardwareCode, HardwareRevision
@@ -278,3 +281,44 @@ def firmware_latest_view(request):
     if fw is None:
         return _not_found("No firmware published for this (hw_code, hw_rev).")
     return JsonResponse(_firmware_dict(fw))
+
+
+# ---------------------------------------------------------------------------
+# Human-facing overview page (site UI, not the CI API)
+# ---------------------------------------------------------------------------
+
+@role_required("admin")
+def firmware_overview_view(request):
+    """Admin page listing published firmwares grouped by hardware code/revision.
+
+    Read-only counterpart to the JSON publication API: shows every image with
+    version, size, MD5, upload date and a download link, and marks the latest
+    per revision (most recently uploaded). Also surfaces how many real devices
+    resolve to each hardware code.
+    """
+    codes = (
+        HardwareCode.objects
+        .prefetch_related("revisions__firmwares", "devices")
+        .all()
+    )
+    groups = []
+    for code in codes:
+        revisions = []
+        for rev in code.revisions.all():
+            firmwares = sorted(
+                rev.firmwares.all(), key=lambda f: f.uploaded_at, reverse=True
+            )
+            latest_id = firmwares[0].id if firmwares else None
+            revisions.append(
+                {"rev": rev, "firmwares": firmwares, "latest_id": latest_id}
+            )
+        groups.append(
+            {
+                "code": code,
+                "revisions": revisions,
+                # len() over the prefetched cache — no extra COUNT query.
+                "device_count": len(code.devices.all()),
+                "firmware_count": sum(len(r["firmwares"]) for r in revisions),
+            }
+        )
+    return render(request, "ota/firmware_overview.html", {"groups": groups})

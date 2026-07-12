@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ design.name }} — {% trans "Sensor catalog" %}{% endblock %}
+
+{% block content %}
+<style>
+    .markdown-body img { max-width: 100%; height: auto; border-radius: 6px; }
+    .markdown-body pre:not(.mermaid) { overflow-x: auto; padding: 0.75rem; background: var(--pico-code-background-color); border-radius: 6px; }
+    .markdown-body table { display: block; overflow-x: auto; }
+    .markdown-body pre.mermaid { background: none; text-align: center; }
+</style>
+
+<div style="display:flex; align-items:baseline; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.25rem;">
+    <h2 style="margin:0; flex:1; min-width:0;">{{ design.name }}</h2>
+    <a href="{% url 'catalog:list' %}" role="button" class="outline btn-sm">&#8801; {% trans "Catalog" %}</a>
+</div>
+<p style="margin-top:0;">
+    {% if design.status == "active" %}<span class="badge badge-online">{% trans "Active" %}</span>
+    {% elif design.status == "deprecated" %}<span class="badge badge-offline">{% trans "Deprecated" %}</span>
+    {% else %}<span class="badge badge-pending">{% trans "Draft" %}</span>{% endif %}
+    {% if design.summary %}&mdash; {{ design.summary }}{% endif %}
+</p>
+
+{% if design.cover %}<img src="{{ design.cover.url }}" alt="{{ design.name }}" style="max-width:100%; border-radius:8px; margin-bottom:1rem;">{% endif %}
+
+<article class="section-box markdown-body">
+    {{ design.body_html }}
+</article>
+
+<h3>{% trans "Related hardware" %}</h3>
+{% if hardware %}
+    {% for hw in hardware %}
+    <details open class="section-box">
+        <summary><code>{{ hw.code.hw_code }}</code>{% if hw.code.platform %} — {{ hw.code.platform }}{% endif %}</summary>
+
+        <h4 style="margin-bottom:0.3rem;">{% trans "Firmwares" %}</h4>
+        {% if hw.revisions %}
+        <ul>
+            {% for r in hw.revisions %}
+            <li>
+                {% trans "Revision" %} {{ r.rev.hw_rev }}:
+                {% if r.latest %}
+                    <strong>{{ r.latest.version }}</strong> <span class="badge badge-online">{% trans "latest" %}</span>
+                    (<a href="{{ r.latest.file.url }}" download>{% trans "download" %}</a>)
+                {% else %}
+                    <small>{% trans "no firmware published" %}</small>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p><small>{% trans "No revision registered." %}</small></p>
+        {% endif %}
+
+        <h4 style="margin-bottom:0.3rem;">{% trans "Real devices" %}</h4>
+        {% if hw.devices %}
+        <ul>
+            {% for device in hw.devices %}
+            <li><a href="{% url 'devices:history' device.device_id %}">{{ device.display_name|default:device.device_id }}</a>{% if device.location %} — {{ device.location }}{% endif %}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p><small>{% trans "No device resolved to this hardware code yet." %}</small></p>
+        {% endif %}
+    </details>
+    {% endfor %}
+{% else %}
+    <p>{% trans "No hardware code linked to this design." %}</p>
+{% endif %}
+
+<script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+    const nodes = Array.from(document.querySelectorAll("pre.mermaid"));
+    // Keep the original diagram source: mermaid replaces the element content
+    // with rendered SVG, so re-rendering on a theme change needs the text back.
+    nodes.forEach((n) => { n.dataset.src = n.textContent; });
+
+    function currentTheme() {
+        return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "default";
+    }
+
+    async function renderDiagrams() {
+        if (!nodes.length) return;
+        nodes.forEach((n) => {
+            n.textContent = n.dataset.src;
+            n.removeAttribute("data-processed");
+        });
+        mermaid.initialize({ startOnLoad: false, theme: currentTheme() });
+        await mermaid.run({ nodes });
+    }
+
+    renderDiagrams();
+    // base.html dispatches "themechange" when the site theme toggle is used.
+    window.addEventListener("themechange", renderDiagrams);
+</script>
+{% endblock %}

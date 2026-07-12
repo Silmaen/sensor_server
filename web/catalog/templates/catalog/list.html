@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Sensor catalog" %}{% endblock %}
+
+{% block content %}
+<h2>{% trans "Sensor catalog" %}</h2>
+<p>{% trans "Documentation of the sensors designed for this installation." %}</p>
+
+{% if designs %}
+<div class="device-grid">
+    {% for design in designs %}
+    <article class="device-card">
+        {% if design.cover %}<img src="{{ design.cover.url }}" alt="{{ design.name }}" style="max-width:100%; border-radius:6px; margin-bottom:0.5rem;">{% endif %}
+        <h4 style="margin-bottom:0.3rem;">
+            <a href="{% url 'catalog:detail' design.slug %}">{{ design.name }}</a>
+        </h4>
+        <p style="margin:0 0 0.5rem;">
+            {% if design.status == "active" %}<span class="badge badge-online">{% trans "Active" %}</span>
+            {% elif design.status == "deprecated" %}<span class="badge badge-offline">{% trans "Deprecated" %}</span>
+            {% else %}<span class="badge badge-pending">{% trans "Draft" %}</span>{% endif %}
+        </p>
+        {% if design.summary %}<p style="margin:0;">{{ design.summary }}</p>{% endif %}
+        {% for code in design.hardware_codes.all %}
+        <span class="badge badge-legacy"><code>{{ code.hw_code }}</code></span>
+        {% endfor %}
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<p>{% trans "No sensor design documented yet." %}</p>
+{% endif %}
+{% endblock %}

@@ -10,10 +10,10 @@ stores time-series in TimescaleDB, serves a real-time dashboard with device cont
 ## Stack
 
 - **Docker Compose**: mosquitto, timescaledb (pg16), redis, web (Django 5.x / Daphne)
-- **Django apps**: `accounts` (auth/roles/OIDC), `devices` (registry/commands), `readings` (time-series/dashboard/WebSocket), `mqtt_bridge` (MQTT worker/auto-discovery), `api` (read-only HTTP API for external services), `ota` (hardware registry, firmware catalog, publication API, OTA push)
+- **Django apps**: `accounts` (auth/roles/OIDC), `devices` (registry/commands), `readings` (time-series/dashboard/WebSocket), `mqtt_bridge` (MQTT worker/auto-discovery), `api` (read-only HTTP API for external services), `ota` (hardware registry, firmware catalog, publication API, OTA push), `catalog` (designed-sensor documentation in Markdown, linked to hardware codes)
 - **Auth**: optional Authentik SSO via mozilla-django-oidc; local login fallback when `OIDC_RP_CLIENT_ID` is empty
 - **Real-time**: Django Channels WebSocket + HTMX ws extension
-- **Charts**: ECharts via CDN
+- **Charts**: ECharts via CDN; Mermaid via CDN on the catalog detail page only (renders ```mermaid``` diagrams from sensor docs)
 - **CSS**: Pico CSS via CDN — no build step
 - **i18n**: English (default) + French, `{% trans %}` / `gettext_lazy`, locale files in `web/locale/`
 - **Reverse proxy / TLS**: handled by an **external** reverse proxy (not in this repo); the app runs HTTP only. nginx may be added to the stack to serve Django **static + media** from disk (media includes OTA firmware `.bin`, exposed to devices at `/fw/`) — but never TLS. See `.claude/rules/architecture.md`.
@@ -52,6 +52,8 @@ curl http://localhost:8000/healthz/
 - **Sensor schema**: narrow table (one row per metric), managed as TimescaleDB hypertable (`managed = False` in Django model, raw SQL migration)
 - **TimescaleDB policies**: continuous aggregates (hourly/daily), compression after 7 days, retention 90 days on raw data
 - **Roles**: `None` (pending) < `guest` < `resident` < `admin`. Enforced by `@role_required` decorator + `RoleMiddleware`
+- **Django admin access**: a superuser can promote/demote other users to full superuser (`is_staff` + `is_superuser`) from `/accounts/users/`. The `.env`-defined superuser (`DJANGO_SUPERUSER_USERNAME`) is protected and never web-modifiable. The admin is re-skinned (`templates/admin/base_site.html` + `static/admin/css/sensor_admin.css`) to the site orange with a permanent red viewport frame.
+- **Sensor catalog**: `catalog.SensorDesign` (Markdown body via `catalog/markdown.py`, supports ```mermaid``` fences + uploaded `SensorImage`s), linked to `ota.HardwareCode` (M2M). Firmwares and real devices are derived from the hardware codes, never stored on the design. Edited in Django admin, viewed at `/catalog/`.
 - **Templates**: Pico CSS + HTMX (CDN) — no JS framework, no npm. Only JS is ECharts init blocks
 - **Static files**: served by WhiteNoise, `collectstatic` runs in entrypoint
 - **Device approval**: auto-discovered devices default to `is_approved=False`; sensor data is dropped until an admin approves. Capabilities (hardware ID, metrics, commands, publish interval) are auto-requested on discovery, reconnection, and after every command. Capabilities timeout is `max(60s, 2×publish_interval)` (deep-sleep tolerant); no response → `error` alert.

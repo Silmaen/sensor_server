@@ -11,6 +11,11 @@ paths:
 - All views require authentication via `@role_required` or `@login_required`.
 - WebSocket connections must verify the user is approved (role is not None).
 - User input rendered in JavaScript context must use `|escapejs`.
+- Catalog Markdown (`SensorDesign.body`) is rendered to HTML and marked safe: it
+  is authored ONLY by trusted superusers/admins via the Django admin. Never feed
+  `catalog.markdown.render_markdown` with untrusted/end-user input.
+- Granting Django admin access (`is_staff`/`is_superuser`) from the web UI is
+  restricted to existing superusers; the `.env` superuser is never modifiable.
 - Open redirects must be prevented with `url_has_allowed_host_and_scheme`.
 - Query parameters (hours, days, etc.) must be bounded and validated.
 - Unauthenticated endpoints are limited to: `/healthz/`, and the OTA firmware

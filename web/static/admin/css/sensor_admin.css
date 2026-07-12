@@ -1,0 +1,69 @@
+/*
+ * Django admin re-skin for the IoT Sensors project.
+ *
+ * Two goals:
+ *  1. Align the admin palette with the site theme (orange, cf. templates/base.html).
+ *  2. Draw a permanent red frame around the viewport so it is always obvious
+ *     that the current page is the admin, not the public site.
+ *
+ * The admin exposes its palette through CSS custom properties (Django 5). We
+ * override the accent-related ones. They are repeated across the theme
+ * selectors (:root / [data-theme] / prefers-color-scheme) so the orange wins in
+ * light mode, dark mode, and the explicit theme toggle alike.
+ */
+
+:root,
+:root[data-theme="light"],
+:root[data-theme="dark"] {
+    --primary: #e67e22;
+    --secondary: #c05600;
+    --accent: #f39c12;
+    --primary-fg: #fff;
+
+    --header-color: #ffede0;
+    --header-branding-color: #fff;
+    --header-bg: #c05600;
+    --header-link-color: #fff;
+
+    --breadcrumbs-fg: #ffede0;
+    --breadcrumbs-link-fg: #fff;
+    --breadcrumbs-bg: #d35400;
+
+    --link-fg: #c05600;
+    --link-hover-color: #a04800;
+    --link-selected-fg: #a04800;
+
+    --button-bg: #c05600;
+    --button-fg: #fff;
+    --button-hover-bg: #a04800;
+    --default-button-bg: #e67e22;
+    --default-button-hover-bg: #d35400;
+
+    --object-tools-bg: #c05600;
+    --object-tools-hover-bg: #a04800;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --link-fg: #f39c12;
+        --link-hover-color: #f7b955;
+        --link-selected-fg: #f39c12;
+    }
+}
+
+:root[data-theme="dark"] {
+    --link-fg: #f39c12;
+    --link-hover-color: #f7b955;
+    --link-selected-fg: #f39c12;
+}
+
+/* Permanent red frame around the window — fixed so it stays on the viewport
+ * edges regardless of scroll. Non-interactive and above the admin chrome. */
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    border: 5px solid #c0392b;
+    pointer-events: none;
+    z-index: 100000;
+}

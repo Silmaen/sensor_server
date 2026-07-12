@@ -95,7 +95,9 @@
                 <li><a href="{% url 'readings:dashboard' %}">{% trans "Dashboard" %}</a></li>
                 <li><a href="{% url 'readings:overview' %}">{% trans "Overview" %}</a></li>
                 <li><a href="{% url 'devices:list' %}">{% trans "Devices" %}</a></li>
+                <li><a href="{% url 'catalog:list' %}">{% trans "Sensors" %}</a></li>
                 {% if user_role == "admin" or user.is_superuser %}
+                    <li><a href="{% url 'ota_web:firmware_overview' %}">{% trans "Firmwares" %}</a></li>
                     <li><a href="{% url 'accounts:user_list' %}">{% trans "Users" %}</a></li>
                 {% endif %}
                 {% if user.is_superuser %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Firmwares" %}{% endblock %}
+
+{% block content %}
+<h2>{% trans "Published firmwares" %}</h2>
+<p>{% trans "Firmware images available for OTA delivery, grouped by hardware type and revision." %}</p>
+
+{% for group in groups %}
+<article class="section-box">
+    <header style="display:flex; align-items:baseline; gap:0.5rem; flex-wrap:wrap;">
+        <h3 style="margin:0; flex:1; min-width:0;">
+            <code>{{ group.code.hw_code }}</code>
+            {% if group.code.platform %}<small>{{ group.code.platform }}</small>{% endif %}
+        </h3>
+        <span class="badge badge-resident">{% blocktrans count counter=group.firmware_count %}{{ counter }} image{% plural %}{{ counter }} images{% endblocktrans %}</span>
+        <span class="badge badge-indoor">{% blocktrans count counter=group.device_count %}{{ counter }} device{% plural %}{{ counter }} devices{% endblocktrans %}</span>
+    </header>
+    {% if group.code.description %}<p style="margin:0.25rem 0 0.75rem;">{{ group.code.description }}</p>{% endif %}
+
+    {% for r in group.revisions %}
+    <h4 style="margin-bottom:0.3rem;">{% trans "Revision" %} {{ r.rev.hw_rev }}{% if r.rev.description %} — {{ r.rev.description }}{% endif %}</h4>
+    {% if r.firmwares %}
+    <div class="table-responsive">
+    <table>
+        <thead>
+            <tr>
+                <th>{% trans "Version" %}</th>
+                <th>{% trans "Size" %}</th>
+                <th>MD5</th>
+                <th>{% trans "Uploaded" %}</th>
+                <th>{% trans "Download" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fw in r.firmwares %}
+            <tr>
+                <td>
+                    {{ fw.version }}
+                    {% if fw.id == r.latest_id %}<span class="badge badge-online">{% trans "latest" %}</span>{% endif %}
+                </td>
+                <td>{{ fw.size|filesizeformat }}</td>
+                <td><code style="font-size:0.8em;">{{ fw.md5 }}</code></td>
+                <td>{{ fw.uploaded_at|date:"Y-m-d H:i" }}</td>
+                <td><a href="{{ fw.file.url }}" download>{% trans "Download" %}</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p><small>{% trans "No firmware published for this revision." %}</small></p>
+    {% endif %}
+    {% empty %}
+    <p><small>{% trans "No revision registered for this hardware code." %}</small></p>
+    {% endfor %}
+</article>
+{% empty %}
+<p>{% trans "No hardware code registered yet." %}</p>
+{% endfor %}
+{% endblock %}

@@ -2,6 +2,11 @@ from django.conf import settings
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
+from django.utils.translation import gettext_lazy as _
+
+admin.site.site_header = _("IoT Sensors — Administration")
+admin.site.site_title = _("IoT Sensors admin")
+admin.site.index_title = _("Administration")
 
 
 def healthz(request):
@@ -28,6 +33,8 @@ urlpatterns = [
     path("devices/", include("devices.urls")),
     path("api/v1/", include("api.urls")),
     path("api/", include("ota.urls")),
+    path("ota/", include("ota.web_urls")),
+    path("catalog/", include("catalog.urls")),
     path("", include("readings.urls")),
 ]
 

@@ -6,3 +6,6 @@ paho-mqtt>=2.1
 django-redis>=5.4
 mozilla-django-oidc>=4.0
 whitenoise>=6.7
+markdown>=3.7
+pymdown-extensions>=10.11
+Pillow>=11.0

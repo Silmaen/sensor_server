@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sensor_server 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-06 23:28+0200\n"
+"POT-Creation-Date: 2026-07-11 14:58+0200\n"
 "PO-Revision-Date: 2026-03-17 00:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
@@ -16,17 +16,17 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: accounts/decorators.py:23
+#: accounts/decorators.py:23 accounts/views.py:101
 msgid "You do not have the required permissions."
 msgstr "Vous n'avez pas les permissions nécessaires."
 
 #: accounts/models.py:8 accounts/templates/accounts/user_list.html:26
-#: accounts/templates/accounts/user_list.html:70
+#: accounts/templates/accounts/user_list.html:71
 msgid "Guest"
 msgstr "Invité"
 
 #: accounts/models.py:9 accounts/templates/accounts/user_list.html:27
-#: accounts/templates/accounts/user_list.html:71
+#: accounts/templates/accounts/user_list.html:72
 msgid "Resident"
 msgstr "Habitant"
 
@@ -39,7 +39,7 @@ msgid "pending"
 msgstr "en attente"
 
 #: accounts/templates/accounts/login.html:3
-#: accounts/templates/accounts/login.html:8 templates/base.html:119
+#: accounts/templates/accounts/login.html:8 templates/base.html:122
 msgid "Log in"
 msgstr "Connexion"
 
@@ -192,9 +192,9 @@ msgid "Action"
 msgstr "Action"
 
 #: accounts/templates/accounts/user_list.html:28
-#: accounts/templates/accounts/user_list.html:72
+#: accounts/templates/accounts/user_list.html:73
 msgid "Admin"
-msgstr ""
+msgstr "Admin"
 
 #: accounts/templates/accounts/user_list.html:30
 #: devices/templates/devices/_device_tables.html:28
@@ -213,20 +213,43 @@ msgstr "Utilisateurs approuvés"
 msgid "Role"
 msgstr "Rôle"
 
-#: accounts/templates/accounts/user_list.html:65
+#: accounts/templates/accounts/user_list.html:52
+msgid "Django admin"
+msgstr "Admin Django"
+
+#: accounts/templates/accounts/user_list.html:66
+#: accounts/templates/accounts/user_list.html:84
 msgid "Protected"
 msgstr "Protégé"
 
-#: accounts/templates/accounts/user_list.html:73
-#: devices/templates/devices/_device_tables.html:90
+#: accounts/templates/accounts/user_list.html:74
+#: accounts/templates/accounts/user_list.html:91
+#: devices/templates/devices/_device_tables.html:92
 msgid "Revoke"
 msgstr "Révoquer"
 
-#: accounts/templates/accounts/user_list.html:75
+#: accounts/templates/accounts/user_list.html:76
 msgid "Update"
 msgstr "Modifier"
 
-#: accounts/templates/accounts/user_list.html:85
+#: accounts/templates/accounts/user_list.html:83
+msgid "superuser"
+msgstr "superutilisateur"
+
+#: accounts/templates/accounts/user_list.html:89
+msgid "Granted"
+msgstr "Accordé"
+
+#: accounts/templates/accounts/user_list.html:93
+#| msgid "Success"
+msgid "No access"
+msgstr "Aucun accès"
+
+#: accounts/templates/accounts/user_list.html:95
+msgid "Grant"
+msgstr "Accorder"
+
+#: accounts/templates/accounts/user_list.html:107
 msgid "No approved users."
 msgstr "Aucun utilisateur approuvé."
 
@@ -234,14 +257,119 @@ msgstr "Aucun utilisateur approuvé."
 msgid "Invalid credentials."
 msgstr "Identifiants invalides."
 
-#: accounts/views.py:67
+#: accounts/views.py:80 accounts/views.py:107
 msgid "Cannot modify the superuser account."
 msgstr "Impossible de modifier le compte super-administrateur."
 
 #: api/admin.py:31
 #, python-format
 msgid "API key created. Copy it now — it will not be shown again: %(token)s"
-msgstr ""
+msgstr "Clé API créée. Copiez-la maintenant — elle ne sera plus affichée : %(token)s"
+
+#: catalog/admin.py:14
+msgid "Markdown reference"
+msgstr "Référence Markdown"
+
+#: catalog/admin.py:28
+msgid ""
+"Markdown. Use a ```mermaid``` fenced block for diagrams, and reference "
+"uploaded images by their URL (shown next to each image below)."
+msgstr "Markdown. Utilisez un bloc de code ```mermaid``` pour les diagrammes, et référencez les images téléversées par leur URL (indiquée à côté de chaque image ci-dessous)."
+
+#: catalog/models.py:18 catalog/templates/catalog/detail.html:20
+#: catalog/templates/catalog/list.html:20
+msgid "Draft"
+msgstr "Brouillon"
+
+#: catalog/models.py:19 catalog/templates/catalog/detail.html:18
+#: catalog/templates/catalog/list.html:18
+#| msgid "Action"
+msgid "Active"
+msgstr "Actif"
+
+#: catalog/models.py:20 catalog/templates/catalog/detail.html:19
+#: catalog/templates/catalog/list.html:19
+msgid "Deprecated"
+msgstr "Obsolète"
+
+#: catalog/models.py:39
+msgid "sensor design"
+msgstr "conception de capteur"
+
+#: catalog/models.py:40
+msgid "sensor designs"
+msgstr "conceptions de capteurs"
+
+#: catalog/models.py:66
+msgid "sensor image"
+msgstr "image de capteur"
+
+#: catalog/models.py:67
+msgid "sensor images"
+msgstr "images de capteurs"
+
+#: catalog/templates/catalog/detail.html:3
+#: catalog/templates/catalog/list.html:3 catalog/templates/catalog/list.html:6
+msgid "Sensor catalog"
+msgstr "Catalogue de capteurs"
+
+#: catalog/templates/catalog/detail.html:15
+msgid "Catalog"
+msgstr "Catalogue"
+
+#: catalog/templates/catalog/detail.html:30
+msgid "Related hardware"
+msgstr "Matériel associé"
+
+#: catalog/templates/catalog/detail.html:36
+#: ota/templates/ota/firmware_overview.html:3 templates/base.html:100
+#| msgid "Firmware version:"
+msgid "Firmwares"
+msgstr "Firmwares"
+
+#: catalog/templates/catalog/detail.html:41
+#: ota/templates/ota/firmware_overview.html:22
+msgid "Revision"
+msgstr "Révision"
+
+#: catalog/templates/catalog/detail.html:43
+#: ota/templates/ota/firmware_overview.html:40
+msgid "latest"
+msgstr "dernier"
+
+#: catalog/templates/catalog/detail.html:44
+msgid "download"
+msgstr "télécharger"
+
+#: catalog/templates/catalog/detail.html:46
+#| msgid "firmware update"
+msgid "no firmware published"
+msgstr "aucun firmware publié"
+
+#: catalog/templates/catalog/detail.html:52
+msgid "No revision registered."
+msgstr "Aucune révision enregistrée."
+
+#: catalog/templates/catalog/detail.html:55
+#| msgid "Rename device"
+msgid "Real devices"
+msgstr "Appareils réels"
+
+#: catalog/templates/catalog/detail.html:63
+msgid "No device resolved to this hardware code yet."
+msgstr "Aucun appareil ne correspond encore à ce code matériel."
+
+#: catalog/templates/catalog/detail.html:68
+msgid "No hardware code linked to this design."
+msgstr "Aucun code matériel lié à cette conception."
+
+#: catalog/templates/catalog/list.html:7
+msgid "Documentation of the sensors designed for this installation."
+msgstr "Documentation des capteurs conçus pour cette installation."
+
+#: catalog/templates/catalog/list.html:30
+msgid "No sensor design documented yet."
+msgstr "Aucune conception de capteur documentée pour le moment."
 
 #: devices/admin.py:8
 msgid "online status"
@@ -255,19 +383,19 @@ msgstr "En ligne"
 msgid "Offline"
 msgstr "Hors ligne"
 
-#: devices/models.py:144
+#: devices/models.py:175
 msgid "Pending"
 msgstr "En attente"
 
-#: devices/models.py:145
+#: devices/models.py:176
 msgid "Success"
 msgstr "Succès"
 
-#: devices/models.py:146
+#: devices/models.py:177
 msgid "Failed"
 msgstr "Échec"
 
-#: devices/models.py:147
+#: devices/models.py:178
 msgid "Timeout"
 msgstr "Délai dépassé"
 
@@ -276,7 +404,7 @@ msgid "Date"
 msgstr "Date"
 
 #: devices/templates/devices/_command_log.html:8
-#: devices/templates/devices/device_admin.html:93
+#: devices/templates/devices/device_admin.html:99
 msgid "Command"
 msgstr "Commande"
 
@@ -332,13 +460,13 @@ msgid "low battery"
 msgstr "batterie faible"
 
 #: devices/templates/devices/_device_card.html:21
-#: devices/templates/devices/_device_tables.html:81
+#: devices/templates/devices/_device_tables.html:83
 msgid "Device reports no firmware version — update recommended"
 msgstr ""
 "L'appareil ne signale aucune version de firmware — mise à jour recommandée"
 
 #: devices/templates/devices/_device_card.html:21
-#: devices/templates/devices/_device_tables.html:81
+#: devices/templates/devices/_device_tables.html:83
 msgid "firmware update"
 msgstr "mise à jour firmware"
 
@@ -396,7 +524,16 @@ msgstr "Appareils approuvés"
 msgid "Location"
 msgstr "Emplacement"
 
-#: devices/templates/devices/_device_tables.html:100
+#: devices/templates/devices/_device_tables.html:81
+msgid "Pre-OTA firmware — reflash manually to enable over-the-air updates"
+msgstr "Firmware pré-OTA — reflashez manuellement pour activer les mises à jour à distance"
+
+#: devices/templates/devices/_device_tables.html:81
+#: devices/templates/devices/device_admin.html:49
+msgid "legacy"
+msgstr "hérité"
+
+#: devices/templates/devices/_device_tables.html:102
 #: readings/templates/readings/_dashboard_cards.html:24
 msgid ""
 "No devices detected. Devices will appear automatically when they publish to "
@@ -406,7 +543,7 @@ msgstr ""
 "publieront sur MQTT."
 
 #: devices/templates/devices/device_admin.html:3
-#: devices/templates/devices/device_history.html:41
+#: devices/templates/devices/device_history.html:41 sensor_server/urls.py:9
 msgid "Administration"
 msgstr "Administration"
 
@@ -418,7 +555,7 @@ msgstr "Précédent"
 #: devices/templates/devices/device_admin.html:10
 #: devices/templates/devices/device_history.html:31
 #: devices/templates/devices/device_list.html:3
-#: devices/templates/devices/device_list.html:6 templates/base.html:96
+#: devices/templates/devices/device_list.html:6 templates/base.html:97
 msgid "Devices"
 msgstr "Appareils"
 
@@ -462,11 +599,22 @@ msgstr "remplacez ou rechargez la batterie."
 msgid "Low battery:"
 msgstr "Batterie faible :"
 
-#: devices/templates/devices/device_admin.html:49
+#: devices/templates/devices/device_admin.html:50
+msgid "Pre-OTA firmware."
+msgstr "Firmware pré-OTA."
+
+#: devices/templates/devices/device_admin.html:51
+msgid ""
+"This device runs firmware from before the OTA rollout (no OTA support and no "
+"registered hardware code). Reflash it manually with a published firmware to "
+"enable over-the-air updates."
+msgstr "Cet appareil exécute un firmware antérieur au déploiement OTA (aucun support OTA ni code matériel enregistré). Reflashez-le manuellement avec un firmware publié pour activer les mises à jour à distance."
+
+#: devices/templates/devices/device_admin.html:55
 msgid "Firmware update recommended."
 msgstr "Mise à jour du firmware recommandée."
 
-#: devices/templates/devices/device_admin.html:50
+#: devices/templates/devices/device_admin.html:56
 msgid ""
 "This device does not report a hardware code or firmware version, which "
 "indicates outdated firmware."
@@ -474,120 +622,167 @@ msgstr ""
 "Cet appareil ne signale ni code matériel ni version de firmware, ce qui "
 "indique un firmware obsolète."
 
-#: devices/templates/devices/device_admin.html:55
+#: devices/templates/devices/device_admin.html:61
 msgid "Hardware ID:"
 msgstr "ID matériel :"
 
-#: devices/templates/devices/device_admin.html:58
+#: devices/templates/devices/device_admin.html:64
 msgid "Hardware code:"
 msgstr "Code matériel :"
 
-#: devices/templates/devices/device_admin.html:61
+#: devices/templates/devices/device_admin.html:67
 msgid "Firmware version:"
 msgstr "Version du firmware :"
 
-#: devices/templates/devices/device_admin.html:64
+#: devices/templates/devices/device_admin.html:70
 msgid "Battery:"
 msgstr "Batterie :"
 
-#: devices/templates/devices/device_admin.html:69
+#: devices/templates/devices/device_admin.html:75
 msgid "Capabilities"
 msgstr "Capacités"
 
-#: devices/templates/devices/device_admin.html:71
+#: devices/templates/devices/device_admin.html:77
 msgid "Publish interval:"
 msgstr "Intervalle de publication :"
 
-#: devices/templates/devices/device_admin.html:74
+#: devices/templates/devices/device_admin.html:80
 msgid "Metrics:"
 msgstr "Métriques :"
 
-#: devices/templates/devices/device_admin.html:77
+#: devices/templates/devices/device_admin.html:83
 msgid "Metric"
 msgstr "Métrique"
 
-#: devices/templates/devices/device_admin.html:77
+#: devices/templates/devices/device_admin.html:83
 msgid "Unit"
 msgstr "Unité"
 
-#: devices/templates/devices/device_admin.html:90
+#: devices/templates/devices/device_admin.html:96
 msgid "Accepted commands:"
 msgstr "Commandes acceptées :"
 
-#: devices/templates/devices/device_admin.html:93
+#: devices/templates/devices/device_admin.html:99
 msgid "Parameters"
 msgstr "Paramètres"
 
-#: devices/templates/devices/device_admin.html:116
+#: devices/templates/devices/device_admin.html:122
 msgid "Guest-visible metrics:"
 msgstr "Mesures visibles par les invités :"
 
-#: devices/templates/devices/device_admin.html:124
+#: devices/templates/devices/device_admin.html:130
 msgid "Request capabilities"
 msgstr "Demander les capacités"
 
-#: devices/templates/devices/device_admin.html:131
+#: devices/templates/devices/device_admin.html:137
 msgid "Calibration"
 msgstr "Calibration"
 
-#: devices/templates/devices/device_admin.html:132
+#: devices/templates/devices/device_admin.html:140
 msgid "Adjust sensor offsets. The value is added to the raw reading."
 msgstr ""
 "Ajuster les offsets des capteurs. La valeur est ajoutée à la mesure brute."
 
-#: devices/templates/devices/device_admin.html:144
+#: devices/templates/devices/device_admin.html:152
+#: devices/templates/devices/device_admin.html:172
 #: devices/templates/devices/device_history.html:89
 #: readings/templates/readings/overview.html:69
 msgid "Apply"
 msgstr "Appliquer"
 
-#: devices/templates/devices/device_admin.html:152
-msgid "Request current offsets"
-msgstr "Demander les offsets actuels"
+#: devices/templates/devices/device_admin.html:160
+msgid "Battery voltage-divider ratio (bat_divider)."
+msgstr "Rapport du diviseur de tension de la batterie (bat_divider)."
 
 #: devices/templates/devices/device_admin.html:161
+#, python-format
+msgid "Nominal for this revision: %(nominal)s."
+msgstr "Nominal pour cette révision : %(nominal)s."
+
+#: devices/templates/devices/device_admin.html:163
+#, fuzzy
+#| msgid "Battery"
+msgid "Battery divider"
+msgstr "Batterie"
+
+#: devices/templates/devices/device_admin.html:179
+msgid "Server mirror:"
+msgstr "Miroir serveur :"
+
+#: devices/templates/devices/device_admin.html:186
+#, fuzzy
+#| msgid "Request current offsets"
+msgid "Request current calibration"
+msgstr "Demander les offsets actuels"
+
+#: devices/templates/devices/device_admin.html:193
+msgid "Firmware (OTA)"
+msgstr "Firmware (OTA)"
+
+#: devices/templates/devices/device_admin.html:195
+msgid "Push a compatible firmware image to this device over the air."
+msgstr "Envoyer une image de firmware compatible à cet appareil, à distance (OTA)."
+
+#: devices/templates/devices/device_admin.html:197
+msgid "Push this firmware to the device?"
+msgstr "Envoyer ce firmware à l'appareil ?"
+
+#: devices/templates/devices/device_admin.html:202
+msgid "current"
+msgstr "actuel"
+
+#: devices/templates/devices/device_admin.html:205
+msgid "Push firmware"
+msgstr "Envoyer le firmware"
+
+#: devices/templates/devices/device_admin.html:209
+msgid ""
+"No compatible firmware has been published for this device's hardware yet."
+msgstr "Aucun firmware compatible n'a encore été publié pour le matériel de cet appareil."
+
+#: devices/templates/devices/device_admin.html:218
 msgid "Approve device"
 msgstr "Approuver l'appareil"
 
-#: devices/templates/devices/device_admin.html:165
+#: devices/templates/devices/device_admin.html:222
 msgid "Send command"
 msgstr "Envoyer une commande"
 
-#: devices/templates/devices/device_admin.html:170
+#: devices/templates/devices/device_admin.html:227
 msgid "Action:"
 msgstr "Action :"
 
-#: devices/templates/devices/device_admin.html:181
+#: devices/templates/devices/device_admin.html:238
 msgid "Parameters:"
 msgstr "Paramètres :"
 
-#: devices/templates/devices/device_admin.html:182
+#: devices/templates/devices/device_admin.html:239
 msgid "value1, value2, ..."
 msgstr "valeur1, valeur2, ..."
 
-#: devices/templates/devices/device_admin.html:184
+#: devices/templates/devices/device_admin.html:241
 msgid "Send"
 msgstr "Envoyer"
 
-#: devices/templates/devices/device_admin.html:191
+#: devices/templates/devices/device_admin.html:248
 msgid "Command history"
 msgstr "Historique des commandes"
 
-#: devices/templates/devices/device_admin.html:198
+#: devices/templates/devices/device_admin.html:255
 msgid "Danger zone"
 msgstr "Zone de danger"
 
-#: devices/templates/devices/device_admin.html:203
+#: devices/templates/devices/device_admin.html:260
 msgid "Revoke approval"
 msgstr "Révoquer l'approbation"
 
-#: devices/templates/devices/device_admin.html:206
+#: devices/templates/devices/device_admin.html:263
 #: devices/templates/devices/device_delete_confirm.html:3
 #: devices/templates/devices/device_delete_confirm.html:6
 msgid "Delete device"
 msgstr "Supprimer l'appareil"
 
-#: devices/templates/devices/device_admin.html:225
+#: devices/templates/devices/device_admin.html:282
 msgid "Expected:"
 msgstr "Attendu :"
 
@@ -812,43 +1007,160 @@ msgstr "<strong>%(name)s</strong> sera supprimé après la fusion."
 msgid "Merge"
 msgstr "Fusionner"
 
-#: devices/views.py:99 readings/metrics.py:11
+#: devices/views.py:106 readings/metrics.py:11
 msgid "Temperature"
 msgstr "Température"
 
-#: devices/views.py:100 readings/metrics.py:12
+#: devices/views.py:107 readings/metrics.py:12
 msgid "Humidity"
 msgstr "Humidité"
 
-#: devices/views.py:101 readings/metrics.py:13
+#: devices/views.py:108 readings/metrics.py:13
 msgid "Pressure"
 msgstr "Pression"
 
-#: devices/views.py:171
-msgid "Invalid metric."
-msgstr "Métrique invalide."
+#: devices/views.py:172
+msgid "Unknown or incompatible firmware."
+msgstr "Firmware inconnu ou incompatible."
 
-#: devices/views.py:176
-msgid "Invalid value."
-msgstr "Valeur invalide."
-
-#: devices/views.py:185 devices/views.py:228
+#: devices/views.py:181 devices/views.py:254 devices/views.py:291
+#: devices/views.py:345
 msgid "MQTT publish error."
 msgstr "Erreur d'envoi MQTT."
 
-#: devices/views.py:214
+#: devices/views.py:242
+msgid "Invalid metric."
+msgstr "Métrique invalide."
+
+#: devices/views.py:247 devices/views.py:284
+msgid "Invalid value."
+msgstr "Valeur invalide."
+
+#: devices/views.py:279
+#, fuzzy
+#| msgid "Invalid time range."
+msgid "Invalid calibration key."
+msgstr "Plage de temps invalide."
+
+#: devices/views.py:329
 msgid "Empty command."
 msgstr "Commande vide."
 
-#: devices/views.py:345
+#: devices/views.py:465
 msgid "Device ID cannot be empty."
 msgstr "L'ID de l'appareil ne peut pas être vide."
 
-#: devices/views.py:350
+#: devices/views.py:470
 msgid "Device ID may only contain letters, digits, hyphens, and underscores."
 msgstr ""
 "L'ID de l'appareil ne peut contenir que des lettres, chiffres, tirets et "
 "underscores."
+
+#: ota/models.py:18
+msgid "Hardware code must be exactly 8 uppercase alphanumeric characters."
+msgstr "Le code matériel doit comporter exactement 8 caractères alphanumériques majuscules."
+
+#: ota/models.py:39
+#, fuzzy
+#| msgid "Hardware code:"
+msgid "hardware code"
+msgstr "Code matériel :"
+
+#: ota/models.py:40
+#, fuzzy
+#| msgid "Hardware code:"
+msgid "hardware codes"
+msgstr "Code matériel :"
+
+#: ota/models.py:67
+#, fuzzy
+#| msgid "Firmware version:"
+msgid "hardware revision"
+msgstr "Version du firmware :"
+
+#: ota/models.py:68
+#, fuzzy
+#| msgid "Firmware version:"
+msgid "hardware revisions"
+msgstr "Version du firmware :"
+
+#: ota/models.py:101
+#, fuzzy
+#| msgid "firmware update"
+msgid "firmware"
+msgstr "mise à jour firmware"
+
+#: ota/models.py:102
+#, fuzzy
+#| msgid "firmware update"
+msgid "firmwares"
+msgstr "mise à jour firmware"
+
+#: ota/templates/ota/firmware_overview.html:6
+#| msgid "Publish interval:"
+msgid "Published firmwares"
+msgstr "Firmwares publiés"
+
+#: ota/templates/ota/firmware_overview.html:7
+msgid ""
+"Firmware images available for OTA delivery, grouped by hardware type and "
+"revision."
+msgstr "Images de firmware disponibles pour la diffusion OTA, regroupées par type de matériel et révision."
+
+#: ota/templates/ota/firmware_overview.html:16
+#, python-format
+msgid "%(counter)s image"
+msgid_plural "%(counter)s images"
+msgstr[0] "%(counter)s image"
+msgstr[1] "%(counter)s images"
+
+#: ota/templates/ota/firmware_overview.html:17
+#, python-format
+msgid "%(counter)s device"
+msgid_plural "%(counter)s devices"
+msgstr[0] "%(counter)s appareil"
+msgstr[1] "%(counter)s appareils"
+
+#: ota/templates/ota/firmware_overview.html:28
+msgid "Version"
+msgstr "Version"
+
+#: ota/templates/ota/firmware_overview.html:29
+msgid "Size"
+msgstr "Taille"
+
+#: ota/templates/ota/firmware_overview.html:31
+msgid "Uploaded"
+msgstr "Téléversé"
+
+#: ota/templates/ota/firmware_overview.html:32
+#: ota/templates/ota/firmware_overview.html:45
+msgid "Download"
+msgstr "Télécharger"
+
+#: ota/templates/ota/firmware_overview.html:52
+msgid "No firmware published for this revision."
+msgstr "Aucun firmware publié pour cette révision."
+
+#: ota/templates/ota/firmware_overview.html:55
+msgid "No revision registered for this hardware code."
+msgstr "Aucune révision enregistrée pour ce code matériel."
+
+#: ota/templates/ota/firmware_overview.html:59
+msgid "No hardware code registered yet."
+msgstr "Aucun code matériel enregistré pour le moment."
+
+#: readings/admin.py:34
+#, fuzzy
+#| msgid "Delete readings"
+msgid "Delete selected readings"
+msgstr "Supprimer des mesures"
+
+#: readings/admin.py:39
+#, fuzzy, python-format
+#| msgid "%(count)d readings deleted."
+msgid "%(n)d reading(s) deleted."
+msgstr "%(count)d mesures supprimées."
 
 #: readings/metrics.py:14
 msgid "UV index"
@@ -875,12 +1187,12 @@ msgid "Averages"
 msgstr "Moyennes"
 
 #: readings/templates/readings/dashboard.html:3
-#: readings/templates/readings/dashboard.html:19 templates/base.html:94
+#: readings/templates/readings/dashboard.html:19 templates/base.html:95
 msgid "Dashboard"
 msgstr "Tableau de bord"
 
 #: readings/templates/readings/overview.html:3
-#: readings/templates/readings/overview.html:29 templates/base.html:95
+#: readings/templates/readings/overview.html:29 templates/base.html:96
 msgid "Overview"
 msgstr "Vue d'ensemble"
 
@@ -901,15 +1213,30 @@ msgstr "Aucune mesure trouvée dans cette plage."
 msgid "%(count)d readings deleted."
 msgstr "%(count)d mesures supprimées."
 
-#: templates/base.html:7 templates/base.html:85
+#: sensor_server/urls.py:7 templates/admin/base_site.html:7
+#| msgid "Administration"
+msgid "IoT Sensors — Administration"
+msgstr "Capteurs IoT — Administration"
+
+#: sensor_server/urls.py:8 templates/admin/base_site.html:4
+#| msgid "IoT Sensors"
+msgid "IoT Sensors admin"
+msgstr "Admin Capteurs IoT"
+
+#: templates/base.html:7 templates/base.html:86
 msgid "IoT Sensors"
 msgstr "Capteurs IoT"
 
 #: templates/base.html:98
+#| msgid "IoT Sensors"
+msgid "Sensors"
+msgstr "Capteurs"
+
+#: templates/base.html:101
 msgid "Users"
 msgstr "Utilisateurs"
 
-#: templates/base.html:107 templates/base.html:115
+#: templates/base.html:110 templates/base.html:118
 msgid "Log out"
 msgstr "Déconnexion"
 

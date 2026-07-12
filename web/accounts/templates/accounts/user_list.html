@@ -49,6 +49,7 @@
             <th>{% trans "Email" %}</th>
             <th>{% trans "Role" %}</th>
             <th>{% trans "Action" %}</th>
+            {% if user.is_superuser %}<th>{% trans "Django admin" %}</th>{% endif %}
         </tr>
     </thead>
     <tbody>
@@ -61,7 +62,7 @@
             <td>{{ profile.user.email }}</td>
             <td><span class="badge badge-{{ profile.role }}">{{ profile.get_role_display }}</span></td>
             <td>
-                {% if profile.user.is_superuser %}
+                {% if profile.user.username == env_superuser %}
                     <small>{% trans "Protected" %}</small>
                 {% else %}
                     <form method="post" action="{% url 'accounts:user_set_role' profile.user.id %}" style="display:inline-flex; align-items:center; gap:0.3rem; margin:0;">
@@ -76,6 +77,27 @@
                     </form>
                 {% endif %}
             </td>
+            {% if user.is_superuser %}
+            <td>
+                {% if profile.user.username == env_superuser %}
+                    <span class="badge badge-admin">{% trans "superuser" %}</span>
+                    <small>{% trans "Protected" %}</small>
+                {% else %}
+                    <form method="post" action="{% url 'accounts:user_set_superadmin' profile.user.id %}" style="display:inline-flex; align-items:center; gap:0.3rem; margin:0;">
+                        {% csrf_token %}
+                        {% if profile.user.is_superuser %}
+                            <span class="badge badge-online">{% trans "Granted" %}</span>
+                            <input type="hidden" name="action" value="revoke">
+                            <button type="submit" class="outline secondary btn-sm">{% trans "Revoke" %}</button>
+                        {% else %}
+                            <span class="badge badge-offline">{% trans "No access" %}</span>
+                            <input type="hidden" name="action" value="grant">
+                            <button type="submit" class="outline btn-sm">{% trans "Grant" %}</button>
+                        {% endif %}
+                    </form>
+                {% endif %}
+            </td>
+            {% endif %}
         </tr>
         {% endfor %}
     </tbody>
