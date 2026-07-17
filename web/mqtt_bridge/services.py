@@ -26,6 +26,12 @@ HW_CODE_RE = re.compile(r"^[A-Z0-9]{8}$")
 # cycle before success can be observed.
 OTA_UPDATE_TIMEOUT = 600
 
+# Server-generated alert raised when a device never answers a capabilities
+# request. Unlike device-reported alerts (warning/error on the status topic),
+# it is cleared server-side — either when capabilities finally arrive, or when
+# the device resumes normal sensor publishing.
+NO_CAPABILITIES_ALERT = "no_capabilities_response"
+
 # Aliases for compact metric names sent by firmware.
 # Maps short/alternate names to canonical metric names used in the database.
 METRIC_ALIASES = {
@@ -292,8 +298,13 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
     device.last_seen = now
     update_fields = ["last_seen"]
 
-    # Clear alert when device resumes normal sensor publishing
-    if device.alert_level:
+    # Clear the server-generated capabilities-timeout alert when the device
+    # resumes normal sensor publishing. Device-reported alerts (warning/error
+    # on the status topic, e.g. low_battery) are NOT cleared here: the device
+    # re-asserts them every cycle, so clearing them on each sensor message would
+    # make the alert flap (cleared then re-set) and pollute the status timeline.
+    # Those are cleared only by the device sending an ok/empty status message.
+    if device.alert_message == NO_CAPABILITIES_ALERT:
         device.alert_level = ""
         device.alert_message = ""
         update_fields += ["alert_level", "alert_message"]
@@ -335,12 +346,12 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
         timeout = max(CAPABILITIES_RESPONSE_TIMEOUT, 2 * (device.publish_interval or 0))
         if elapsed > timeout:
             device.alert_level = "error"
-            device.alert_message = "no_capabilities_response"
+            device.alert_message = NO_CAPABILITIES_ALERT
             device.capabilities_requested_at = None
             device.save(update_fields=["alert_level", "alert_message", "capabilities_requested_at"])
             DeviceStatusLog.objects.create(
                 time=now, device=device,
-                alert_level="error", alert_message="no_capabilities_response",
+                alert_level="error", alert_message=NO_CAPABILITIES_ALERT,
             )
             _resolve_capability_requests(
                 device, CommandLog.STATUS_TIMEOUT,
@@ -562,7 +573,7 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
     device.capabilities = capabilities
     was_pending = device.capabilities_requested_at is not None
     device.capabilities_requested_at = None
-    had_timeout_alert = device.alert_level == "error" and device.alert_message == "no_capabilities_response"
+    had_timeout_alert = device.alert_level == "error" and device.alert_message == NO_CAPABILITIES_ALERT
     if had_timeout_alert:
         device.alert_level = ""
         device.alert_message = ""
