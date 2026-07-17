@@ -88,6 +88,11 @@ Identifiers containing MQTT wildcards (`+`, `#`) or slashes (`/`) are rejected.
 - `"warning"` indicates a degraded state (e.g. low battery, sensor drift).
 - `"error"` indicates a failure (e.g. sensor hardware fault).
 
+A device-reported alert is **latched**: it stays set until the device publishes
+an `"ok"`/empty status. It is *not* cleared by incoming `sensors` messages
+(the device re-asserts it every cycle, which would otherwise make the alert
+flap). The lone exception is `low_battery` (see below).
+
 **Important:** Devices do **not** publish online/offline status. Online detection
 is computed server-side (see [Online/offline detection](#onlineoffline-detection)).
 
@@ -102,6 +107,12 @@ messages, the server tracks the latest `bat_percent` reading on each device
 below 20%, `critical` at or below 5%. This provides a low-battery alert even
 for devices whose firmware does not publish `low_battery` status messages, and
 is exposed as a badge in the UI and as `battery_status` in the read API.
+
+Because the server has its own authoritative battery reading, it also **auto-clears**
+a firmware-reported `low_battery` warning (`{"level":"warning","message":"low_battery"}`)
+once a fresh `bat_percent` shows the battery back above the low threshold — e.g.
+after a battery swap. This is necessary because deep-sleep devices typically do
+not publish an explicit `"ok"` status once the battery is replaced.
 
 ### 3. Commands (`command`)
 

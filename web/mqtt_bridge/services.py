@@ -32,6 +32,13 @@ OTA_UPDATE_TIMEOUT = 600
 # the device resumes normal sensor publishing.
 NO_CAPABILITIES_ALERT = "no_capabilities_response"
 
+# Message a device uses for a firmware-reported low-battery alert on the status
+# topic. The server reconciles it against its own battery reading: once a fresh
+# bat_percent shows the battery is back to OK, the latched alert is cleared even
+# if the device never publishes an explicit "ok" status (deep-sleep devices
+# typically don't after a battery swap).
+LOW_BATTERY_ALERT = "low_battery"
+
 # Aliases for compact metric names sent by firmware.
 # Maps short/alternate names to canonical metric names used in the database.
 METRIC_ALIASES = {
@@ -407,6 +414,39 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
         if "bat_percent" in stored and stored["bat_percent"] != device.battery_percent:
             device.battery_percent = stored["bat_percent"]
             device.save(update_fields=["battery_percent"])
+
+            # Reconcile a latched firmware-reported low_battery alert against the
+            # fresh reading: once the battery is back to OK (e.g. after a swap),
+            # clear it. Deep-sleep devices rarely publish an explicit "ok" status,
+            # so without this the warning would stick forever.
+            if (
+                device.alert_level == "warning"
+                and device.alert_message == LOW_BATTERY_ALERT
+                and device.battery_status == "ok"
+            ):
+                device.alert_level = ""
+                device.alert_message = ""
+                device.save(update_fields=["alert_level", "alert_message"])
+                DeviceStatusLog.objects.create(
+                    time=now, device=device,
+                    alert_level="", alert_message="",
+                )
+                logger.info(
+                    "sensors %s/%s -> cleared low_battery alert (battery back to %.0f%%)",
+                    device_type, device_id, device.battery_percent,
+                )
+                async_to_sync(channel_layer.group_send)(
+                    "live_readings",
+                    {
+                        "type": "device_status",
+                        "status": {
+                            "device_id": device_id,
+                            "alert_level": "",
+                            "alert_message": "",
+                            "device_name": device.effective_name,
+                        },
+                    },
+                )
 
 
 def handle_status_message(device_type: str, device_id: str, payload: bytes):
