@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 
-from .models import CommandLog, Device
+from .models import CommandLog, Device, DeviceDiagLog
 
 
 class OnlineFilter(admin.SimpleListFilter):
@@ -41,3 +41,14 @@ class CommandLogAdmin(admin.ModelAdmin):
     list_display = ("device", "action", "sent_at", "sent_by", "status", "acked_at")
     list_filter = ("status",)
     search_fields = ("device__device_id", "response_message")
+
+
+@admin.register(DeviceDiagLog)
+class DeviceDiagLogAdmin(admin.ModelAdmin):
+    list_display = (
+        "device", "time", "level", "message", "reset_cause",
+        "boot", "miss", "seq", "rssi", "heap",
+    )
+    list_filter = ("level", "device")
+    search_fields = ("device__device_id", "message")
+    date_hierarchy = "time"

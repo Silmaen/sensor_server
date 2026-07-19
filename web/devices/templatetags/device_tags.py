@@ -35,3 +35,25 @@ def metric_label(metric):
 def metric_unit(metric):
     """Return default unit for a metric."""
     return get_metric_unit(metric)
+
+
+# Diagnostics reset-cause codes reported on the `diag` topic (see the firmware
+# docs/diagnostics.md). Kept in sync with platform_diag.h ResetCause.
+_RESET_CAUSE_LABELS = {
+    0: "unknown",
+    1: "power-on",
+    2: "external",
+    3: "software",
+    4: "deep-sleep",
+    5: "brownout",
+    6: "panic",
+    7: "watchdog",
+}
+
+
+@register.filter
+def reset_cause_label(code):
+    """Human-readable label for a diag reset-cause code (0-7)."""
+    if code is None:
+        return "-"
+    return _RESET_CAUSE_LABELS.get(code, str(code))

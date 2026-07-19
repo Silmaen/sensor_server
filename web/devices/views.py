@@ -13,6 +13,8 @@ from mqtt_bridge.services import (
     request_calibration,
     request_capabilities,
     request_commands,
+    request_diag,
+    request_status,
 )
 from ota.models import HardwareRevision
 from ota.services import OtaError, compatible_firmwares, send_ota_update
@@ -144,6 +146,9 @@ def device_admin_view(request, device_id):
     # OTA: offer compatible firmwares only for OTA-capable devices.
     ota_firmwares = list(compatible_firmwares(device)) if device.ota_capable else []
 
+    # Diagnostics: recent health snapshots (diag topic), diag-capable devices only.
+    diag_logs = list(device.diag_logs.all()[:20]) if device.supports_diag else []
+
     return render(request, "devices/device_admin.html", {
         "device": device,
         "commands": commands,
@@ -157,6 +162,7 @@ def device_admin_view(request, device_id):
         "bat_divider": bat_divider,
         "calibration_mirror": mirror,
         "ota_firmwares": ota_firmwares,
+        "diag_logs": diag_logs,
     })
 
 
@@ -311,6 +317,46 @@ def device_request_calibration_view(request, device_id):
         return HttpResponseBadRequest()
 
     request_calibration(device)
+
+    if request.headers.get("HX-Request"):
+        commands = device.commands.select_related("sent_by")[:20]
+        return render(request, "devices/_command_log.html", {"commands": commands, "device": device})
+    return redirect("devices:admin", device_id=device.device_id)
+
+
+@role_required("admin")
+def device_request_status_view(request, device_id):
+    """Pull the device's current health state on demand (get_status).
+
+    Gated on supports_diag: only diag-capable firmware advertises get_status.
+    """
+    device = get_object_or_404(Device, device_id=device_id)
+    if request.method != "POST":
+        return HttpResponseBadRequest()
+    if not device.supports_diag:
+        return HttpResponseBadRequest(_("Device does not support diagnostics."))
+
+    request_status(device)
+
+    if request.headers.get("HX-Request"):
+        commands = device.commands.select_related("sent_by")[:20]
+        return render(request, "devices/_command_log.html", {"commands": commands, "device": device})
+    return redirect("devices:admin", device_id=device.device_id)
+
+
+@role_required("admin")
+def device_request_diag_view(request, device_id):
+    """Ask the device for a diagnostics snapshot on demand (get_diag).
+
+    Gated on supports_diag: only diag-capable firmware advertises get_diag.
+    """
+    device = get_object_or_404(Device, device_id=device_id)
+    if request.method != "POST":
+        return HttpResponseBadRequest()
+    if not device.supports_diag:
+        return HttpResponseBadRequest(_("Device does not support diagnostics."))
+
+    request_diag(device)
 
     if request.headers.get("HX-Request"):
         commands = device.commands.select_related("sent_by")[:20]

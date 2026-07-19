@@ -15,6 +15,7 @@ Device (ESP8266)                           Server (Django MQTT worker)
       |                                            |
       |--- sensors  /{type}/{id}/sensors --------->|  Sensor readings (JSON)
       |--- status   /{type}/{id}/status  --------->|  Alerts: warning/error (JSON)
+      |--- diag     /{type}/{id}/diag    --------->|  Health/diagnostics snapshot (JSON)
       |--- capabilities /{type}/{id}/capabilities->|  Capabilities response (JSON)
       |--- ack        /{type}/{id}/ack ----------->|  Command acknowledgement (JSON)
       |                                            |
@@ -34,7 +35,7 @@ All topics follow the pattern:
 |----------------|---------------------------------------------------------------|----------------------------------------|
 | `device_type`  | Category of device (e.g. `thermo`, `relay`)                   | Alphanumeric, `-`, `_`. Max 128 chars. |
 | `device_id`    | Unique identifier on the network                              | Alphanumeric, `-`, `_`. Max 128 chars. |
-| `message_type` | One of: `sensors`, `status`, `command`, `capabilities`, `ack` |                                        |
+| `message_type` | One of: `sensors`, `status`, `diag`, `command`, `capabilities`, `commands`, `calibration`, `ack` |                                        |
 
 Identifiers containing MQTT wildcards (`+`, `#`) or slashes (`/`) are rejected.
 
@@ -93,6 +94,10 @@ an `"ok"`/empty status. It is *not* cleared by incoming `sensors` messages
 (the device re-asserts it every cycle, which would otherwise make the alert
 flap). The lone exception is `low_battery` (see below).
 
+The server can also **pull** the current status on demand with the `get_status`
+command (see [Requesting status on demand](#requesting-status-on-demand-get_status)),
+to which the device replies with a status message on this same topic.
+
 **Important:** Devices do **not** publish online/offline status. Online detection
 is computed server-side (see [Online/offline detection](#onlineoffline-detection)).
 
@@ -128,7 +133,7 @@ not publish an explicit `"ok"` status once the battery is replaced.
 
 The server publishes commands in three situations:
 - **User-initiated:** an admin or resident sends a command from the web UI
-- **Automatic:** the server sends `request_capabilities` (see below)
+- **Automatic:** the server sends `request_capabilities` / `get_status` (see below)
 - **Wake-up flush:** when a device reconnects, the server re-publishes all
   unacknowledged commands (see [Battery-powered devices](#battery-powered-devices-deep-sleep))
 
@@ -136,8 +141,60 @@ After every user-initiated command, the server automatically sends a follow-up
 `request_capabilities` to refresh the device's reported capabilities,
 since a command may change them (e.g. `set_interval` changes the publish rate).
 
-**Retain flag:** User-initiated commands are published with `retain=True` so the
-device receives them when it reconnects. `request_capabilities` uses `retain=False`.
+**Retain flag:** Commands are published with `retain=False, qos=1`. QoS 1 lets the
+broker queue the message in a deep-sleep device's persistent session and deliver
+it on the next wake; `retain=False` avoids leaving a stale command on the broker
+that would re-fire on every reconnect. Unacknowledged commands are re-sent by the
+wake-up flush instead. (This supersedes an earlier `retain=True` convention.)
+
+#### Requesting status on demand (`get_status`)
+
+`get_status` is a built-in command that asks a device to report its **current**
+alert state immediately, rather than waiting for the device to volunteer one.
+
+```json
+{"action": "get_status"}
+```
+
+**Response:** the device replies on its **`status`** topic (message type 2) with a
+normal status payload reflecting its current state — `{"level": "ok"}` when
+healthy, or `{"level": "warning"|"error", "message": "..."}` when an alert is
+active. There is no dedicated response topic and no `ack`; the reply *is* a
+standard status message, processed by the usual status handler.
+
+**Purpose:** device-reported alerts are latched (see
+[Status alerts](#2-status-alerts-status)). `get_status` lets the server actively
+resynchronise — e.g. to confirm whether a latched alert is still valid, or to
+refresh state after a reconnect — without depending on the device to push an
+update on its own.
+
+**Semantics:**
+- Advertised: unlike `request_capabilities`, `get_status` and `get_diag` are
+  **registered commands** and appear in the device's `commands` list. The
+  server treats a device as **diagnostics-capable** only when **both** are
+  advertised (`Device.supports_diag`), and never sends them otherwise — older
+  firmware that lists neither is left alone.
+- One-shot request: published `retain=False, qos=1`, so it is queued for a
+  deep-sleep device and delivered on its next wake.
+- The device **must always** answer, including with `{"level": "ok"}` when no
+  alert is active — an explicit "ok" is how the server clears a stale latched
+  alert.
+- The server also sends `get_status` **automatically on wake-up** (reconnection)
+  for diagnostics-capable devices, to resynchronise a latched alert.
+
+#### Requesting diagnostics on demand (`get_diag`)
+
+`get_diag` asks a device to publish a diagnostics snapshot immediately, rather
+than waiting for a problem to trigger an automatic publish.
+
+```json
+{"action": "get_diag"}
+```
+
+**Response:** the device replies on its **`diag`** topic (see
+[Diagnostics](#6-diagnostics-diag)) with a full snapshot, whatever its current
+health level. Like `get_status` it is advertised in the `commands` list,
+published `retain=False, qos=1`, and gated on `Device.supports_diag`.
 
 ### 4. Capabilities (`capabilities`)
 
@@ -230,6 +287,51 @@ log, so an operator can see exactly what became of each command.
 - The `action` field must exactly match the `action` in the original command.
 - Acks are optional — the server does not require them, but they enable
   the admin UI to show whether a command was executed.
+
+### 6. Diagnostics (`diag`)
+
+**Direction:** Device -> Server
+
+**Topic:** `{device_type}/{device_id}/diag`
+
+**Payload:** JSON health/diagnostics snapshot. The device publishes it **only
+when its health level is `warning` or `error`** (nominal wakes publish nothing,
+to save battery/bandwidth), or on demand as the reply to a `get_diag` command.
+
+```json
+{
+  "level": "warning", "message": "missed_wakes",
+  "rst": 4, "boot": 812, "miss": 2, "wake_ms": 1840, "seq": 4021, "pubfail": 0,
+  "rssi": -73, "heap": 28160, "bat": 61,
+  "fw": "1.3.0", "hw": "E8BMEBAT", "hwrev": 1, "id": "ESP-00A1B2"
+}
+```
+
+| Field     | Type   | Meaning                                                                        |
+|-----------|--------|--------------------------------------------------------------------------------|
+| `level`   | string | Health level: `"ok"`, `"info"`, `"warning"`, `"error"`.                        |
+| `message` | string | Dominant condition (e.g. `reset_brownout`, `missed_wakes`, `low_memory`).       |
+| `rst`     | number | Reset cause: 0=unknown 1=power-on 2=ext 3=sw 4=deep-sleep 5=brownout 6=panic 7=wdt |
+| `boot`    | number | Total boots since cold start (unexpected-reset detector).                       |
+| `miss`    | number | Consecutive connect failures since last publish.                                |
+| `wake_ms` | number | Wake → publish duration in ms (slow-connect detector).                          |
+| `seq`     | number | Monotonic publish counter (a gap = a lost publish).                             |
+| `pubfail` | number | `publish()` failures since last publish.                                        |
+| `rssi`    | number | WiFi link strength (dBm) at connect.                                            |
+| `heap`    | number | Free heap in bytes (leak/fragmentation; 0/absent on SAMD21).                     |
+| `bat`     | number | Battery state of charge (percent), if the device has a battery.                 |
+| `fw`/`hw`/`hwrev`/`id` | | Firmware/hardware identity, echoed for fault logs.                     |
+
+**Server behavior:**
+- Only accepts messages from already-known devices (no auto-discovery on diag).
+- Stores each snapshot as a `DeviceDiagLog` row (device health view / admin).
+- **Reflects `level`/`message` onto the device alert** like a `status` message:
+  `warning`/`error` latch an alert (surfaced in the UI badges and read API),
+  `ok`/`info` clear it. The `DeviceStatusLog` timeline and the WebSocket
+  broadcast are updated only when the alert actually changes.
+
+Full field rationale and the cross-platform sourcing of `rst`/`heap` live in the
+firmware repo's `docs/diagnostics.md`.
 
 ## Capabilities request flow
 

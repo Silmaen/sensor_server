@@ -10,6 +10,16 @@ ALERT_LEVEL_CHOICES = [
     ("error", "Error"),
 ]
 
+# Health ladder reported on the diagnostics (`diag`) topic. Wider than
+# ALERT_LEVEL_CHOICES: it also carries "ok" and "info" (nominal / informational
+# states that do not raise a device alert). See docs/diagnostics.md (firmware).
+DIAG_LEVEL_CHOICES = [
+    ("ok", "OK"),
+    ("info", "Info"),
+    ("warning", "Warning"),
+    ("error", "Error"),
+]
+
 LOCATION_TYPE_CHOICES = [
     ("", "—"),
     ("indoor", "Indoor"),
@@ -147,6 +157,20 @@ class Device(models.Model):
             return False
         return not self.ota_capable and self.hardware_code_id is None
 
+    @property
+    def supports_diag(self):
+        """True when the device advertises the on-demand diagnostics commands.
+
+        Detected purely from the advertised command list — there is no dedicated
+        capability flag. Diagnostics-capable firmware registers both
+        ``get_status`` and ``get_diag`` (see docs/diagnostics.md in the firmware
+        repo), so both appear in the ``commands`` message; older firmware lists
+        neither. Gating on this keeps the server from sending those commands to
+        a node that cannot answer them.
+        """
+        cmds = set((self.capabilities or {}).get("commands") or [])
+        return {"get_status", "get_diag"} <= cmds
+
 
 class DeviceStatusLog(models.Model):
     time = models.DateTimeField()
@@ -164,6 +188,47 @@ class DeviceStatusLog(models.Model):
 
     def __str__(self):
         return f"{self.device_id} {self.alert_level or 'ok'} @ {self.time:%Y-%m-%d %H:%M}"
+
+
+class DeviceDiagLog(models.Model):
+    """A diagnostics snapshot pushed by a device on the ``diag`` topic.
+
+    The firmware publishes ``diag`` only when its health level is at least
+    ``warning``, or on demand in response to ``get_diag`` (see
+    docs/diagnostics.md in the firmware repo). That makes it low-volume, so a
+    plain managed table (not a TimescaleDB hypertable) is enough — it mirrors
+    DeviceStatusLog. The technical fields feed the device health view; the
+    ``level``/``message`` are also reflected onto ``Device.alert_*`` by the diag
+    handler (a warning/error latches an alert, like a status message).
+
+    All technical fields are nullable: they are platform-specific (e.g. SAMD21
+    has no heap metric) or may be absent from a given firmware's payload.
+    """
+    time = models.DateTimeField()
+    device = models.ForeignKey(
+        Device, on_delete=models.CASCADE, related_name="diag_logs"
+    )
+    level = models.CharField(
+        max_length=16, blank=True, default="ok", choices=DIAG_LEVEL_CHOICES
+    )
+    message = models.CharField(max_length=256, blank=True, default="")
+    # reset_cause: 0=unknown 1=power-on 2=ext 3=sw 4=deep-sleep 5=brownout 6=panic 7=wdt
+    reset_cause = models.PositiveSmallIntegerField(null=True, blank=True)
+    boot = models.PositiveIntegerField(null=True, blank=True)  # total boots since cold start
+    miss = models.PositiveIntegerField(null=True, blank=True)  # consecutive connect failures
+    wake_ms = models.PositiveIntegerField(null=True, blank=True)  # wake -> publish duration
+    seq = models.PositiveIntegerField(null=True, blank=True)  # monotonic publish counter
+    pubfail = models.PositiveIntegerField(null=True, blank=True)  # publish() failures
+    rssi = models.IntegerField(null=True, blank=True)  # dBm at connect
+    heap = models.PositiveIntegerField(null=True, blank=True)  # free heap bytes
+    battery_percent = models.PositiveSmallIntegerField(null=True, blank=True)  # bat soc
+
+    class Meta:
+        ordering = ["-time"]
+        indexes = [models.Index(fields=["device", "time"])]
+
+    def __str__(self):
+        return f"{self.device_id} diag {self.level} @ {self.time:%Y-%m-%d %H:%M}"
 
 
 class CommandLog(models.Model):

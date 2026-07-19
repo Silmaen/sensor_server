@@ -12,6 +12,7 @@ from mqtt_bridge.services import (
     handle_calibration_message,
     handle_capabilities_message,
     handle_commands_message,
+    handle_diag_message,
     handle_sensor_message,
     handle_status_message,
     parse_topic,
@@ -21,6 +22,7 @@ from mqtt_bridge.topics import (
     TOPIC_CALIBRATION,
     TOPIC_CAPABILITIES,
     TOPIC_COMMANDS,
+    TOPIC_DIAG,
     TOPIC_SENSORS,
     TOPIC_STATUS,
 )
@@ -68,6 +70,7 @@ class Command(BaseCommand):
                 (TOPIC_CAPABILITIES, 1),
                 (TOPIC_COMMANDS, 1),
                 (TOPIC_CALIBRATION, 1),
+                (TOPIC_DIAG, 1),
                 (TOPIC_ACK, 1),
             ]
             client.subscribe(topics)
@@ -91,6 +94,7 @@ class Command(BaseCommand):
             "capabilities": handle_capabilities_message,
             "commands": handle_commands_message,
             "calibration": handle_calibration_message,
+            "diag": handle_diag_message,
             "ack": handle_ack_message,
         }
         handler = handlers.get(msg_type)

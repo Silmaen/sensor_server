@@ -5,6 +5,7 @@
 # Capabilities: {device_type}/{device_id}/capabilities  — JSON capabilities response from device (identity + metrics)
 # Commands:     {device_type}/{device_id}/commands      — JSON command list + params from device (answer to request_commands)
 # Calibration:  {device_type}/{device_id}/calibration   — JSON calibration report from device (answer to request_calibration)
+# Diag:         {device_type}/{device_id}/diag           — JSON health/diagnostics snapshot (auto on health>=warning, or answer to get_diag)
 # Ack:          {device_type}/{device_id}/ack           — JSON command acknowledgement from device
 
 TOPIC_SENSORS = "+/+/sensors"
@@ -12,4 +13,5 @@ TOPIC_STATUS = "+/+/status"
 TOPIC_CAPABILITIES = "+/+/capabilities"
 TOPIC_COMMANDS = "+/+/commands"
 TOPIC_CALIBRATION = "+/+/calibration"
+TOPIC_DIAG = "+/+/diag"
 TOPIC_ACK = "+/+/ack"

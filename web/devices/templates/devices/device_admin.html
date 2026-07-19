@@ -211,6 +211,55 @@
 </details>
 {% endif %}
 
+{% if device.supports_diag %}
+<details open>
+    <summary>{% trans "Health & diagnostics" %}</summary>
+    <p><small>{% trans "This device reports diagnostics on demand. The snapshot below is published automatically on a problem, or when requested here." %}</small></p>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;">
+        <form hx-post="{% url 'devices:request_status_diag' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML" style="margin:0;">
+            {% csrf_token %}
+            <button type="submit" class="outline btn-sm">{% trans "Refresh health state" %}</button>
+        </form>
+        <form hx-post="{% url 'devices:request_diag' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML" style="margin:0;">
+            {% csrf_token %}
+            <button type="submit" class="outline btn-sm">{% trans "Request diagnostics" %}</button>
+        </form>
+    </div>
+    {% if diag_logs %}
+    <div class="table-responsive">
+    <table>
+        <thead><tr>
+            <th>{% trans "Time" %}</th><th>{% trans "Level" %}</th><th>{% trans "Message" %}</th>
+            <th title="{% trans 'Reset cause' %}">{% trans "Reset" %}</th>
+            <th title="{% trans 'Total boots' %}">{% trans "Boots" %}</th>
+            <th title="{% trans 'Consecutive connect failures' %}">{% trans "Miss" %}</th>
+            <th title="{% trans 'Publish counter' %}">{% trans "Seq" %}</th>
+            <th>{% trans "Wake" %}</th><th>{% trans "RSSI" %}</th><th>{% trans "Heap" %}</th>
+        </tr></thead>
+        <tbody>
+        {% for d in diag_logs %}
+        <tr>
+            <td><small>{{ d.time|date:"m-d H:i" }}</small></td>
+            <td>{% if d.level == "error" %}<span class="badge badge-offline">{{ d.level }}</span>{% elif d.level == "warning" %}<span class="badge badge-legacy">{{ d.level }}</span>{% else %}{{ d.level }}{% endif %}</td>
+            <td><small>{{ d.message|default:"-" }}</small></td>
+            <td><small>{{ d.reset_cause|reset_cause_label }}</small></td>
+            <td>{{ d.boot|default:"-" }}</td>
+            <td>{{ d.miss|default:"-" }}</td>
+            <td>{{ d.seq|default:"-" }}</td>
+            <td>{% if d.wake_ms is not None %}{{ d.wake_ms }}ms{% else %}-{% endif %}</td>
+            <td>{% if d.rssi is not None %}{{ d.rssi }}dBm{% else %}-{% endif %}</td>
+            <td>{% if d.heap is not None %}{{ d.heap }}B{% else %}-{% endif %}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p><small>{% trans "No diagnostics reported yet." %}</small></p>
+    {% endif %}
+</details>
+{% endif %}
+
 {% if not device.is_approved %}
 <form hx-post="{% url 'devices:approve' device.device_id %}" hx-swap="none">
     {% csrf_token %}

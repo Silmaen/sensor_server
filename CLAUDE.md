@@ -48,7 +48,7 @@ curl http://localhost:8000/healthz/
 
 - **Language**: all code, comments, docstrings, and commit messages in English
 - **i18n**: all user-facing strings use `{% trans %}` in templates, `gettext_lazy` / `gettext` in Python. Default language is English; French translations in `web/locale/fr/`
-- **MQTT topics**: `{device_type}/{device_id}/sensors|status|command|capabilities`
+- **MQTT topics**: `{device_type}/{device_id}/sensors|status|diag|command|capabilities|commands|calibration|ack`
 - **Sensor schema**: narrow table (one row per metric), managed as TimescaleDB hypertable (`managed = False` in Django model, raw SQL migration)
 - **TimescaleDB policies**: continuous aggregates (hourly/daily), compression after 7 days, retention 90 days on raw data
 - **Roles**: `None` (pending) < `guest` < `resident` < `admin`. Enforced by `@role_required` decorator + `RoleMiddleware`
@@ -61,6 +61,7 @@ curl http://localhost:8000/healthz/
 - **Online detection**: computed from `last_seen` and `publish_interval` (offline if no data for 3× interval; default 5 min timeout when interval unknown). `is_online` is a model property, not a DB field.
 - **Device health**: capabilities carry `hw` (hardware code → `hw_code`) and `fw` (firmware version → `fw_version`); a device that reports capabilities without either → `needs_firmware_update` (update recommended). Latest `bat_percent` is stored on `Device.battery_percent`; `battery_status` (model property) is `low` ≤20% / `critical` ≤5%. Both surface as UI badges and read-API fields. Thresholds in `devices/models.py`.
 - **Status topic**: devices publish alerts (`warning`/`error`) as JSON, not online/offline. Online status is computed server-side.
+- **Diagnostics (`diag` topic)**: diag-capable firmware (advertises both `get_status` and `get_diag` in its command list → `Device.supports_diag`) publishes a health snapshot (`rst`, `miss`, `wake_ms`, `seq`, `pubfail`, `rssi`, `heap`, `bat`, `level`, `message`) when health ≥ `warning`, or on demand via `get_diag`. Stored as `DeviceDiagLog`; the `level`/`message` are reflected onto the device alert like a status message. `get_status` pulls the current alert state (reply on `status`); sent on-demand from the device page and automatically on wake-up. Both commands are gated on `supports_diag` (no-op for old firmware). Spec: `docs/mqtt-protocol.md` §6 + firmware `../sensor_iot/docs/diagnostics.md`.
 - **Protocol doc**: full MQTT protocol spec in `docs/mqtt-protocol.md`
 - **Read-only API**: `/api/v1/` (devices, raw readings, hourly/daily aggregates) for external services. Auth via `Authorization: Bearer <token>` against the `api.ApiKey` model (SHA-256 hashed, managed in Django admin). Exposes approved devices only; query params bounded. Spec in `docs/read-api.md`
 - **Security**: CSRF on all forms, logout is POST-only, WebSocket origin validation, MQTT identifier sanitization, `SECURE_*` settings enforced when `DEBUG=False`

@@ -8,7 +8,13 @@ from asgiref.sync import async_to_sync
 from django.conf import settings
 from django.utils import timezone as dj_timezone
 
-from devices.models import CAPABILITIES_RESPONSE_TIMEOUT, CommandLog, Device, DeviceStatusLog
+from devices.models import (
+    CAPABILITIES_RESPONSE_TIMEOUT,
+    CommandLog,
+    Device,
+    DeviceDiagLog,
+    DeviceStatusLog,
+)
 from ota.models import HardwareCode
 from readings.models import SensorReading
 
@@ -148,6 +154,37 @@ def request_calibration(device: Device, sent_by=None):
         _mqtt_publish(topic, payload, retain=False, qos=1)
     except Exception:
         logger.exception("MQTT >> %s -> request_calibration publish failed", topic)
+
+
+def request_status(device: Device, sent_by=None):
+    """Ask a device to report its current health/alert state on demand (get_status).
+
+    The device replies on its `status` topic with a normal status payload — an
+    explicit "ok" is how the server clears a stale latched alert. qos=1 (queued
+    for deep-sleep devices), retain=False: a one-shot request, not a standing
+    command. Callers must gate on ``device.supports_diag``.
+    """
+    topic = f"{device.device_type}/{device.device_id}/command"
+    payload = json.dumps({"action": "get_status"})
+    try:
+        _mqtt_publish(topic, payload, retain=False, qos=1)
+    except Exception:
+        logger.exception("MQTT >> %s -> get_status publish failed", topic)
+
+
+def request_diag(device: Device, sent_by=None):
+    """Ask a device to publish a diagnostics snapshot on demand (get_diag).
+
+    The response arrives on the `diag` topic (handle_diag_message). qos=1 so it
+    is queued for deep-sleep devices; retain=False (one-shot request). Callers
+    must gate on ``device.supports_diag``.
+    """
+    topic = f"{device.device_type}/{device.device_id}/command"
+    payload = json.dumps({"action": "get_diag"})
+    try:
+        _mqtt_publish(topic, payload, retain=False, qos=1)
+    except Exception:
+        logger.exception("MQTT >> %s -> get_diag publish failed", topic)
 
 
 def _repush_calibration(device: Device):
@@ -345,6 +382,12 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
         flush_pending_commands(device)
         request_capabilities(device)
         request_commands(device)
+        # Resync latched health on wake-up for diag-capable devices: the
+        # get_status reply (on the status topic) either clears a stale alert or
+        # re-asserts a real one. Gated on supports_diag — older firmware, which
+        # does not advertise get_status/get_diag, is never sent this command.
+        if device.supports_diag:
+            request_status(device)
     elif device.capabilities_requested_at is not None:
         # Check for capabilities response timeout. Deep-sleep devices only see
         # a queued request on their next wake, so allow at least two publish
@@ -411,14 +454,17 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
         logger.info("sensors %s/%s -> stored %d reading(s): %s", device_type, device_id, len(readings), stored)
 
         # Track latest battery state of charge for server-side low-battery alerts.
-        if "bat_percent" in stored and stored["bat_percent"] != device.battery_percent:
-            device.battery_percent = stored["bat_percent"]
-            device.save(update_fields=["battery_percent"])
+        if "bat_percent" in stored:
+            if stored["bat_percent"] != device.battery_percent:
+                device.battery_percent = stored["bat_percent"]
+                device.save(update_fields=["battery_percent"])
 
             # Reconcile a latched firmware-reported low_battery alert against the
-            # fresh reading: once the battery is back to OK (e.g. after a swap),
+            # current reading: once the battery is back to OK (e.g. after a swap),
             # clear it. Deep-sleep devices rarely publish an explicit "ok" status,
-            # so without this the warning would stick forever.
+            # so without this the warning would stick forever. Checked on every
+            # reading that carries bat_percent — NOT only when the value changes —
+            # so a device that keeps reporting the same good level still recovers.
             if (
                 device.alert_level == "warning"
                 and device.alert_message == LOW_BATTERY_ALERT
@@ -750,6 +796,113 @@ def handle_calibration_message(device_type: str, device_id: str, payload: bytes)
     device.last_seen = dj_timezone.now()
     device.save(update_fields=["calibration", "last_seen"])
     logger.info("calibration %s/%s -> mirror updated: %s", device_type, device_id, mirror)
+
+
+def _diag_uint(value, maximum):
+    """Coerce a diag numeric field to a bounded non-negative int, else None."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    ivalue = int(value)
+    if 0 <= ivalue <= maximum:
+        return ivalue
+    return None
+
+
+def handle_diag_message(device_type: str, device_id: str, payload: bytes):
+    """Process a diagnostics snapshot from a device (`diag` topic).
+
+    The device publishes this when its health level reaches `warning`/`error`,
+    or on demand as the reply to a `get_diag` command. The technical fields are
+    stored as a DeviceDiagLog time series (device health view); the level/message
+    are reflected onto the device alert exactly like a status message — a
+    warning/error latches an alert, an ok/info clears it. See docs/diagnostics.md
+    (firmware repo) and docs/mqtt-protocol.md.
+    """
+    if len(payload) > MAX_PAYLOAD_SIZE:
+        logger.warning("diag %s/%s -> rejected (payload too large: %d bytes)", device_type, device_id, len(payload))
+        return
+
+    try:
+        data = json.loads(payload)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.warning("diag %s/%s -> rejected (invalid JSON)", device_type, device_id)
+        return
+
+    if not isinstance(data, dict):
+        logger.warning("diag %s/%s -> rejected (payload is not a JSON object)", device_type, device_id)
+        return
+
+    try:
+        device = Device.objects.get(device_id=device_id)
+    except Device.DoesNotExist:
+        logger.warning("diag %s/%s -> rejected (unknown device)", device_type, device_id)
+        return
+
+    level = data.get("level", "ok")
+    if level not in ("ok", "info", "warning", "error"):
+        logger.warning("diag %s/%s -> rejected (invalid level: %s)", device_type, device_id, level)
+        return
+    message = data.get("message", "")
+    message = message[:256] if isinstance(message, str) else ""
+
+    now = dj_timezone.now()
+
+    rssi = data.get("rssi")
+    rssi = int(rssi) if isinstance(rssi, (int, float)) and not isinstance(rssi, bool) else None
+
+    DeviceDiagLog.objects.create(
+        time=now,
+        device=device,
+        level=level,
+        message=message,
+        reset_cause=_diag_uint(data.get("rst"), 255),
+        boot=_diag_uint(data.get("boot"), 2**31 - 1),
+        miss=_diag_uint(data.get("miss"), 2**31 - 1),
+        wake_ms=_diag_uint(data.get("wake_ms"), 2**31 - 1),
+        seq=_diag_uint(data.get("seq"), 2**31 - 1),
+        pubfail=_diag_uint(data.get("pubfail"), 2**31 - 1),
+        rssi=rssi,
+        heap=_diag_uint(data.get("heap"), 2**31 - 1),
+        battery_percent=_diag_uint(data.get("bat"), 100),
+    )
+
+    # Reflect the reported health onto the device alert, mirroring the status
+    # handler: warning/error latch an alert; ok/info clear it. Only touch the
+    # DeviceStatusLog / WebSocket layer when the alert actually changes, so a
+    # repeated warning diag does not spam the status timeline (the firmware also
+    # publishes a status message for errors, which would otherwise double up).
+    alert_level = level if level in ("warning", "error") else ""
+    alert_message = message if alert_level else ""
+    changed = device.alert_level != alert_level or device.alert_message != alert_message
+    device.alert_level = alert_level
+    device.alert_message = alert_message
+    device.last_seen = now
+    device.save(update_fields=["alert_level", "alert_message", "last_seen"])
+
+    logger.info(
+        "diag %s/%s -> level=%s message=%s rst=%s miss=%s heap=%s rssi=%s (alert_changed=%s)",
+        device_type, device_id, level, message,
+        data.get("rst"), data.get("miss"), data.get("heap"), data.get("rssi"), changed,
+    )
+
+    if changed:
+        DeviceStatusLog.objects.create(
+            time=now, device=device,
+            alert_level=alert_level, alert_message=alert_message,
+        )
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            "live_readings",
+            {
+                "type": "device_status",
+                "status": {
+                    "device_id": device_id,
+                    "alert_level": alert_level,
+                    "alert_message": alert_message,
+                    "device_name": device.effective_name,
+                },
+            },
+        )
 
 
 def handle_ack_message(device_type: str, device_id: str, payload: bytes):
