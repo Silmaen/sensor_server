@@ -90,9 +90,26 @@ Identifiers containing MQTT wildcards (`+`, `#`) or slashes (`/`) are rejected.
 - `"error"` indicates a failure (e.g. sensor hardware fault).
 
 A device-reported alert is **latched**: it stays set until the device publishes
-an `"ok"`/empty status. It is *not* cleared by incoming `sensors` messages
-(the device re-asserts it every cycle, which would otherwise make the alert
-flap). The lone exception is `low_battery` (see below).
+an `"ok"`/empty status. A single `sensors` message does *not* clear it (the
+device re-asserts a live alert every cycle, which would otherwise make the alert
+flap).
+
+The server does, however, **auto-clear a stale alert**: a live warning/error is
+re-published every wake cycle (on `status` or `diag`), which refreshes the
+alert's timestamp. If an alert goes un-re-published for longer than the
+offline-detection window (3× the publish interval; see
+[Online/offline detection](#onlineoffline-detection)), the condition is treated
+as resolved and the latch is released on the next `sensors` message. This stops
+a one-off warning from a deep-sleep node from sticking forever.
+
+To make that resolution prompt rather than waiting out the full window, while an
+alert is latched the server also **polls the device with `get_diag`** (see
+[Requesting diagnostics on demand](#requesting-diagnostics-on-demand-get_diag)),
+at most once per 110% of the publish interval. The poll is skipped when the
+device is offline (no point queuing to a gone device) or reports a low battery
+(to avoid draining it), and only for diagnostics-capable firmware. The
+`low_battery` warning additionally auto-clears against the server's own battery
+reading (see below).
 
 The server can also **pull** the current status on demand with the `get_status`
 command (see [Requesting status on demand](#requesting-status-on-demand-get_status)),
@@ -320,7 +337,16 @@ to save battery/bandwidth), or on demand as the reply to a `get_diag` command.
 | `rssi`    | number | WiFi link strength (dBm) at connect.                                            |
 | `heap`    | number | Free heap in bytes (leak/fragmentation; 0/absent on SAMD21).                     |
 | `bat`     | number | Battery state of charge (percent), if the device has a battery.                 |
+| `txsent`  | number | Publishes attempted while uplink-confirm mode is on (absent otherwise).          |
+| `txok`    | number | Of those, confirmed delivered via broker loopback (absent otherwise).            |
 | `fw`/`hw`/`hwrev`/`id` | | Firmware/hardware identity, echoed for fault logs.                     |
+
+`txsent`/`txok` are the opt-in **uplink-delivery confirmation** counters, present
+only while `set_confirm_uplink` is on (while on, `diag` is published every wake).
+The server stores them (nullable `DeviceDiagLog.txsent`/`txok`) and derives the
+confirmed-delivery rate `txok / txsent`, shown in the device diagnostics log. A
+low rate with `miss=0` and `rst=4` indicates uplink transit loss, not a power or
+firmware fault. See the firmware repo's `docs/diagnostics.md`.
 
 **Server behavior:**
 - Only accepts messages from already-known devices (no auto-discovery on diag).

@@ -15,6 +15,7 @@ urlpatterns = [
     path("<str:device_id>/request-calibration/", views.device_request_calibration_view, name="request_calibration"),
     path("<str:device_id>/request-status/", views.device_request_status_view, name="request_status_diag"),
     path("<str:device_id>/request-diag/", views.device_request_diag_view, name="request_diag"),
+    path("<str:device_id>/set-confirm-uplink/", views.device_set_confirm_uplink_view, name="set_confirm_uplink"),
     path("<str:device_id>/approve/", views.device_approve_view, name="approve"),
     path("<str:device_id>/request-capabilities/", views.device_request_capabilities_view, name="request_capabilities"),
     path("<str:device_id>/ota-push/", views.device_ota_push_view, name="ota_push"),

@@ -1,4 +1,5 @@
 from django import template
+from django.utils.translation import gettext as _
 
 from readings.metrics import get_metric_label, get_metric_unit
 
@@ -57,3 +58,44 @@ def reset_cause_label(code):
     if code is None:
         return "-"
     return _RESET_CAUSE_LABELS.get(code, str(code))
+
+
+def _diag_message_labels():
+    """Human-readable labels for the diag/status `message` enum strings.
+
+    The firmware emits fixed enum tokens (see the firmware
+    docs/diagnostics.md "Health model"); the server adds its own for
+    server-generated alerts. Built lazily so gettext resolves per active locale.
+    """
+    return {
+        # Firmware diag health messages.
+        "ok": _("Nominal"),
+        "booted": _("Booted"),
+        "fair_signal": _("Fair signal"),
+        "weak_signal": _("Weak signal"),
+        "low_memory": _("Low memory"),
+        "missed_wakes": _("Missed wake-ups"),
+        "low_battery": _("Low battery"),
+        "critical_battery": _("Critical battery"),
+        "reset_brownout": _("Reset: brownout"),
+        "reset_panic": _("Reset: panic"),
+        "reset_wdt": _("Reset: watchdog"),
+        # Server-generated alert messages.
+        "no_capabilities_response": _("No capabilities response"),
+    }
+
+
+@register.filter
+def diag_message_label(message):
+    """Human-readable label for a diag/status `message` enum token.
+
+    Falls back to the raw token with underscores turned into spaces for any
+    message the map does not know (e.g. a newer firmware token), so nothing is
+    ever hidden.
+    """
+    if not message:
+        return "-"
+    labels = _diag_message_labels()
+    if message in labels:
+        return labels[message]
+    return message.replace("_", " ")

@@ -10,6 +10,7 @@ from django.utils import timezone as dj_timezone
 
 from devices.models import (
     CAPABILITIES_RESPONSE_TIMEOUT,
+    DEFAULT_OFFLINE_TIMEOUT,
     CommandLog,
     Device,
     DeviceDiagLog,
@@ -76,6 +77,26 @@ def parse_topic(topic: str) -> tuple[str, str, str] | None:
         logger.warning("Rejected unsafe topic identifiers: %s", topic)
         return None
     return device_type, device_id, msg_type
+
+
+def _alert_reassert_window(device: Device) -> float:
+    """Seconds an active alert may go un-re-published before it is auto-cleared.
+
+    Matches the offline-detection window (3x the publish interval): a live
+    warning/error is re-asserted by the firmware every wake cycle, so an alert
+    that has not been refreshed within three cycles is treated as resolved.
+    """
+    return device.publish_interval * 3 if device.publish_interval > 0 else DEFAULT_OFFLINE_TIMEOUT
+
+
+def _diag_poll_cooldown(device: Device) -> float:
+    """Minimum delay between two automatic get_diag polls of a flagged device.
+
+    110% of the publish interval (one full cycle plus a margin so the poll lands
+    just after the device's own wake), falling back to the default offline
+    timeout when the interval is unknown.
+    """
+    return device.publish_interval * 1.1 if device.publish_interval > 0 else DEFAULT_OFFLINE_TIMEOUT
 
 
 def _mqtt_publish(topic: str, payload: str, retain: bool = False, qos: int = 0):
@@ -185,6 +206,44 @@ def request_diag(device: Device, sent_by=None):
         _mqtt_publish(topic, payload, retain=False, qos=1)
     except Exception:
         logger.exception("MQTT >> %s -> get_diag publish failed", topic)
+
+
+def _maybe_request_diag(device: Device, now):
+    """Poll a flagged device for a fresh diagnostics snapshot (automatic get_diag).
+
+    While an alert is latched, the server nudges the device to re-report its
+    health so a resolved condition clears promptly (via the diag reply) instead
+    of relying only on the staleness timeout. The poll is:
+
+    - skipped when there is no active alert;
+    - skipped when the device cannot answer (no diag support);
+    - skipped when the device is offline (no point queuing to a gone device — it
+      is re-attempted on its next sensor message, which proves it is back);
+    - skipped when the battery is low, to avoid draining it with extra wakes;
+    - rate-limited to once per cooldown (110% of the publish interval).
+
+    The reply on the diag topic re-asserts a live alert (refreshing its
+    timestamp) or clears a resolved one.
+    """
+    if not device.alert_level:
+        return
+    if not device.supports_diag:
+        return
+    if not device.is_online:
+        return
+    if device.is_battery_low:
+        return
+    if device.diag_requested_at is not None:
+        elapsed = (now - device.diag_requested_at).total_seconds()
+        if elapsed < _diag_poll_cooldown(device):
+            return
+    request_diag(device)
+    device.diag_requested_at = now
+    device.save(update_fields=["diag_requested_at"])
+    logger.info(
+        "diag-poll %s/%s -> requested get_diag (alert=%s)",
+        device.device_type, device.device_id, device.alert_level,
+    )
 
 
 def _repush_calibration(device: Device):
@@ -342,16 +401,19 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
     device.last_seen = now
     update_fields = ["last_seen"]
 
-    # Clear the server-generated capabilities-timeout alert when the device
-    # resumes normal sensor publishing. Device-reported alerts (warning/error
-    # on the status topic, e.g. low_battery) are NOT cleared here: the device
-    # re-asserts them every cycle, so clearing them on each sensor message would
-    # make the alert flap (cleared then re-set) and pollute the status timeline.
-    # Those are cleared only by the device sending an ok/empty status message.
+    # Alert reconciliation on incoming sensor data:
+    #  - the server-generated capabilities-timeout alert clears as soon as normal
+    #    sensor publishing resumes;
+    #  - any other device-reported alert (warning/error from the status/diag
+    #    topic) is auto-cleared once it has gone un-re-published for longer than
+    #    the offline-detection window (see the elif below). A live alert is
+    #    re-asserted every wake cycle, which refreshes alert_updated_at, so only a
+    #    genuinely resolved (no longer re-published) alert is released.
     if device.alert_message == NO_CAPABILITIES_ALERT:
         device.alert_level = ""
         device.alert_message = ""
-        update_fields += ["alert_level", "alert_message"]
+        device.alert_updated_at = None
+        update_fields += ["alert_level", "alert_message", "alert_updated_at"]
         DeviceStatusLog.objects.create(
             time=now, device=device,
             alert_level="", alert_message="",
@@ -370,6 +432,45 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
                 },
             },
         )
+    elif device.alert_level:
+        # Auto-clear a stale device-reported alert. A live warning/error is
+        # re-asserted by the firmware every wake cycle (status/diag topic), which
+        # refreshes alert_updated_at. If it has not been re-published within the
+        # offline-detection window, the condition is considered resolved and the
+        # latch is released — so a one-off warning from a deep-sleep node no
+        # longer sticks forever. (The capabilities-timeout alert is handled above
+        # and never reaches this branch.)
+        if device.alert_updated_at is None:
+            # Alert latched before alert_updated_at was tracked: start its clock
+            # now rather than clearing it outright.
+            device.alert_updated_at = now
+            update_fields += ["alert_updated_at"]
+        elif (now - device.alert_updated_at).total_seconds() > _alert_reassert_window(device):
+            logger.info(
+                "sensors %s/%s -> cleared stale alert (%s not re-published within window)",
+                device_type, device_id, device.alert_message or device.alert_level,
+            )
+            device.alert_level = ""
+            device.alert_message = ""
+            device.alert_updated_at = None
+            update_fields += ["alert_level", "alert_message", "alert_updated_at"]
+            DeviceStatusLog.objects.create(
+                time=now, device=device,
+                alert_level="", alert_message="",
+            )
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                "live_readings",
+                {
+                    "type": "device_status",
+                    "status": {
+                        "device_id": device_id,
+                        "alert_level": "",
+                        "alert_message": "",
+                        "device_name": device.effective_name,
+                    },
+                },
+            )
 
     device.save(update_fields=update_fields)
 
@@ -397,8 +498,9 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
         if elapsed > timeout:
             device.alert_level = "error"
             device.alert_message = NO_CAPABILITIES_ALERT
+            device.alert_updated_at = now
             device.capabilities_requested_at = None
-            device.save(update_fields=["alert_level", "alert_message", "capabilities_requested_at"])
+            device.save(update_fields=["alert_level", "alert_message", "alert_updated_at", "capabilities_requested_at"])
             DeviceStatusLog.objects.create(
                 time=now, device=device,
                 alert_level="error", alert_message=NO_CAPABILITIES_ALERT,
@@ -412,6 +514,11 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
     if not device.is_approved:
         logger.info("sensors %s/%s -> dropped (device not approved)", device_type, device_id)
         return
+
+    # While the device is flagged, nudge it for a fresh diagnostics snapshot so a
+    # resolved condition clears quickly. Rate-limited, and skipped when offline or
+    # on a low battery (see _maybe_request_diag).
+    _maybe_request_diag(device, now)
 
     # Insert readings
     readings = []
@@ -472,7 +579,8 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
             ):
                 device.alert_level = ""
                 device.alert_message = ""
-                device.save(update_fields=["alert_level", "alert_message"])
+                device.alert_updated_at = None
+                device.save(update_fields=["alert_level", "alert_message", "alert_updated_at"])
                 DeviceStatusLog.objects.create(
                     time=now, device=device,
                     alert_level="", alert_message="",
@@ -522,20 +630,26 @@ def handle_status_message(device_type: str, device_id: str, payload: bytes):
         logger.warning("status %s/%s -> rejected (invalid level: %s)", device_type, device_id, level)
         return
 
+    now = dj_timezone.now()
+
     # "ok" clears the alert
     if level in ("", "ok"):
         device.alert_level = ""
         device.alert_message = ""
+        device.alert_updated_at = None
         logger.info("status %s/%s -> alert cleared", device_type, device_id)
     else:
         device.alert_level = level
         message = data.get("message", "")
         if isinstance(message, str):
             device.alert_message = message[:256]
+        # Refresh the re-assertion clock: a re-published live alert must not be
+        # auto-cleared as stale by the ingestion service.
+        device.alert_updated_at = now
         logger.info("status %s/%s -> alert set: level=%s message=%s", device_type, device_id, level, device.alert_message)
 
-    device.last_seen = dj_timezone.now()
-    device.save(update_fields=["alert_level", "alert_message", "last_seen"])
+    device.last_seen = now
+    device.save(update_fields=["alert_level", "alert_message", "alert_updated_at", "last_seen"])
 
     DeviceStatusLog.objects.create(
         time=device.last_seen, device=device,
@@ -663,6 +777,7 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
     if had_timeout_alert:
         device.alert_level = ""
         device.alert_message = ""
+        device.alert_updated_at = None
         DeviceStatusLog.objects.create(
             time=dj_timezone.now(), device=device,
             alert_level="", alert_message="",
@@ -679,7 +794,7 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
     device.save(update_fields=[
         "hardware_id", "hardware_code", "hw_rev", "ota_capable", "fw_version",
         "publish_interval", "capabilities", "capabilities_requested_at",
-        "alert_level", "alert_message",
+        "alert_level", "alert_message", "alert_updated_at",
     ])
 
     # A capabilities response fulfils any outstanding request_capabilities.
@@ -864,6 +979,10 @@ def handle_diag_message(device_type: str, device_id: str, payload: bytes):
         rssi=rssi,
         heap=_diag_uint(data.get("heap"), 2**31 - 1),
         battery_percent=_diag_uint(data.get("bat"), 100),
+        # Uplink-confirm counters: present only while set_confirm_uplink is on,
+        # absent (→ None) from a normal diag payload.
+        txsent=_diag_uint(data.get("txsent"), 2**31 - 1),
+        txok=_diag_uint(data.get("txok"), 2**31 - 1),
     )
 
     # Reflect the reported health onto the device alert, mirroring the status
@@ -876,8 +995,13 @@ def handle_diag_message(device_type: str, device_id: str, payload: bytes):
     changed = device.alert_level != alert_level or device.alert_message != alert_message
     device.alert_level = alert_level
     device.alert_message = alert_message
+    # Refresh the re-assertion clock on every warning/error diag (even when the
+    # alert text is unchanged): a device that keeps reporting the same warning is
+    # actively re-asserting it, so it must not be auto-cleared as stale. Cleared
+    # to NULL when the diag reports ok/info.
+    device.alert_updated_at = now if alert_level else None
     device.last_seen = now
-    device.save(update_fields=["alert_level", "alert_message", "last_seen"])
+    device.save(update_fields=["alert_level", "alert_message", "alert_updated_at", "last_seen"])
 
     logger.info(
         "diag %s/%s -> level=%s message=%s rst=%s miss=%s heap=%s rssi=%s (alert_changed=%s)",

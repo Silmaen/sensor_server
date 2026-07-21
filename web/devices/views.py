@@ -25,6 +25,9 @@ from .models import CommandLog, Device, DeviceStatusLog
 
 SAFE_IDENTIFIER_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 
+# How many recent diag snapshots to surface in the per-device views.
+DIAG_LOG_LIMIT = 30
+
 logger = logging.getLogger(__name__)
 
 
@@ -92,6 +95,15 @@ def device_history_view(request, device_id):
 
     prev_id, next_id = _prev_next_device(device_id)
 
+    # Diagnostics message log, admins only: the most recent diag snapshots (level
+    # + message + key detail). Same source as the device admin page's technical
+    # table, surfaced here so an admin reading the charts sees the health history
+    # without leaving the page.
+    diag_logs = (
+        list(device.diag_logs.all()[:DIAG_LOG_LIMIT])
+        if is_admin and device.supports_diag else []
+    )
+
     return render(request, "devices/device_history.html", {
         "device": device,
         "metrics": metrics,
@@ -99,6 +111,7 @@ def device_history_view(request, device_id):
         "units_json": json.dumps(units),
         "metrics_display_json": json.dumps(metrics_display),
         "is_admin": is_admin,
+        "diag_logs": diag_logs,
         "prev_device_id": prev_id,
         "next_device_id": next_id,
     })
@@ -147,7 +160,13 @@ def device_admin_view(request, device_id):
     ota_firmwares = list(compatible_firmwares(device)) if device.ota_capable else []
 
     # Diagnostics: recent health snapshots (diag topic), diag-capable devices only.
-    diag_logs = list(device.diag_logs.all()[:20]) if device.supports_diag else []
+    diag_logs = list(device.diag_logs.all()[:DIAG_LOG_LIMIT]) if device.supports_diag else []
+
+    # Uplink-delivery confirmation toggle (set_confirm_uplink, ESP32 opt-in). The
+    # current on/off state is inferred from the latest diag: the txsent/txok
+    # counters ride the payload only while the mode is on.
+    supports_confirm_uplink = "set_confirm_uplink" in device_commands
+    confirm_uplink_on = bool(diag_logs and diag_logs[0].txsent is not None)
 
     return render(request, "devices/device_admin.html", {
         "device": device,
@@ -163,6 +182,8 @@ def device_admin_view(request, device_id):
         "calibration_mirror": mirror,
         "ota_firmwares": ota_firmwares,
         "diag_logs": diag_logs,
+        "supports_confirm_uplink": supports_confirm_uplink,
+        "confirm_uplink_on": confirm_uplink_on,
     })
 
 
@@ -357,6 +378,46 @@ def device_request_diag_view(request, device_id):
         return HttpResponseBadRequest(_("Device does not support diagnostics."))
 
     request_diag(device)
+
+    if request.headers.get("HX-Request"):
+        commands = device.commands.select_related("sent_by")[:20]
+        return render(request, "devices/_command_log.html", {"commands": commands, "device": device})
+    return redirect("devices:admin", device_id=device.device_id)
+
+
+@role_required("admin")
+def device_set_confirm_uplink_view(request, device_id):
+    """Toggle the device's uplink-delivery confirmation diagnostic (set_confirm_uplink).
+
+    ESP32-only opt-in diagnostic: while on, the device confirms each publish via
+    broker loopback and reports txsent/txok counters in its diag payload (and
+    publishes diag every wake). Gated on the command being advertised. Logged as
+    a pending command; the device acks it, resolving the log entry.
+    """
+    device = get_object_or_404(Device, device_id=device_id)
+    if request.method != "POST":
+        return HttpResponseBadRequest()
+    if "set_confirm_uplink" not in (device.capabilities or {}).get("commands", []):
+        return HttpResponseBadRequest(_("Device does not support uplink confirmation."))
+
+    value = 1 if request.POST.get("value") == "1" else 0
+    command_data = {"action": "set_confirm_uplink", "value": value}
+    topic = f"{device.device_type}/{device.device_id}/command"
+    try:
+        # retain=False, qos=1: queued for deep-sleep devices via the persistent
+        # session; never retained (a retained command re-fires on every reconnect).
+        _mqtt_publish(topic, json.dumps(command_data), retain=False, qos=1)
+    except Exception:
+        logger.exception("Failed to publish MQTT command to %s", topic)
+        return HttpResponseBadRequest(_("MQTT publish error."))
+
+    CommandLog.objects.create(
+        device=device,
+        command=command_data,
+        sent_by=request.user,
+        status=CommandLog.STATUS_PENDING,
+    )
+    logger.info("set_confirm_uplink %s/%s -> value=%d", device.device_type, device.device_id, value)
 
     if request.headers.get("HX-Request"):
         commands = device.commands.select_related("sent_by")[:20]
@@ -585,6 +646,8 @@ def _rename_device(device, new_id):
             publish_interval=device.publish_interval,
             alert_level=device.alert_level,
             alert_message=device.alert_message,
+            alert_updated_at=device.alert_updated_at,
+            diag_requested_at=device.diag_requested_at,
             capabilities_requested_at=device.capabilities_requested_at,
             guest_visible_metrics=device.guest_visible_metrics,
             battery_cell_count=device.battery_cell_count,

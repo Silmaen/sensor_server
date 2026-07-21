@@ -79,6 +79,15 @@ class Device(models.Model):
         max_length=16, blank=True, default="", choices=ALERT_LEVEL_CHOICES
     )
     alert_message = models.CharField(max_length=256, blank=True, default="")
+    # When the current alert was last asserted/re-published by the device. A live
+    # warning/error is re-asserted every wake cycle; the ingestion service clears
+    # an alert that has not been refreshed within the offline-detection window
+    # (see mqtt_bridge.services). NULL when no alert is latched.
+    alert_updated_at = models.DateTimeField(null=True, blank=True)
+    # When the server last sent an automatic get_diag poll to a flagged device,
+    # used to rate-limit the polling (see mqtt_bridge.services). NULL when never
+    # polled or reset.
+    diag_requested_at = models.DateTimeField(null=True, blank=True)
     capabilities_requested_at = models.DateTimeField(null=True, blank=True)
     guest_visible_metrics = models.JSONField(default=list, blank=True)
     location_type = models.CharField(
@@ -222,6 +231,12 @@ class DeviceDiagLog(models.Model):
     rssi = models.IntegerField(null=True, blank=True)  # dBm at connect
     heap = models.PositiveIntegerField(null=True, blank=True)  # free heap bytes
     battery_percent = models.PositiveSmallIntegerField(null=True, blank=True)  # bat soc
+    # Uplink-delivery confirmation counters (opt-in via set_confirm_uplink): only
+    # present while that mode is on, absent from a normal diag payload. txok/txsent
+    # is the confirmed end-to-end delivery rate (broker loopback). See the firmware
+    # docs/diagnostics.md "Uplink-delivery confirmation".
+    txsent = models.PositiveIntegerField(null=True, blank=True)  # publishes attempted
+    txok = models.PositiveIntegerField(null=True, blank=True)  # of those, confirmed delivered
 
     class Meta:
         ordering = ["-time"]
@@ -229,6 +244,19 @@ class DeviceDiagLog(models.Model):
 
     def __str__(self):
         return f"{self.device_id} diag {self.level} @ {self.time:%Y-%m-%d %H:%M}"
+
+    @property
+    def uplink_confirm_rate(self):
+        """Confirmed end-to-end delivery rate (percent) for this snapshot.
+
+        txok / txsent, present only while the uplink-confirm diagnostic is on
+        (both counters reported). Returns None otherwise. Cumulative counters, so
+        this is the lifetime rate; the latest attempt may lag by one wake (see
+        the firmware docs off-by-one note).
+        """
+        if self.txsent:
+            return round(100.0 * (self.txok or 0) / self.txsent, 1)
+        return None
 
 
 class CommandLog(models.Model):

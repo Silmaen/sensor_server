@@ -123,6 +123,43 @@
 </details>
 {% endif %}
 
+{% if is_admin and device.supports_diag %}
+<details class="custom-range">
+    <summary>{% trans "Diagnostic log" %}</summary>
+    <p><small>{% trans "Health snapshots reported by the device (auto-published on a problem, or on demand). Newest first." %}</small></p>
+    {% if diag_logs %}
+    <div class="table-responsive">
+    <table>
+        <thead><tr>
+            <th>{% trans "Time" %}</th>
+            <th>{% trans "Level" %}</th>
+            <th>{% trans "Message" %}</th>
+            <th title="{% trans 'Reset cause' %}">{% trans "Reset" %}</th>
+            <th title="{% trans 'Consecutive connect failures' %}">{% trans "Miss" %}</th>
+            <th>{% trans "RSSI" %}</th>
+            <th title="{% trans 'Confirmed uplink delivery rate (txok/txsent)' %}">{% trans "Uplink" %}</th>
+        </tr></thead>
+        <tbody>
+        {% for d in diag_logs %}
+        <tr>
+            <td><small>{{ d.time|date:"m-d H:i" }}</small></td>
+            <td>{% if d.level == "error" %}<span class="badge badge-offline">{{ d.level }}</span>{% elif d.level == "warning" %}<span class="badge badge-legacy">{{ d.level }}</span>{% else %}{{ d.level }}{% endif %}</td>
+            <td><small>{{ d.message|diag_message_label }}</small></td>
+            <td><small>{{ d.reset_cause|reset_cause_label }}</small></td>
+            <td>{{ d.miss|default:"-" }}</td>
+            <td>{% if d.rssi is not None %}{{ d.rssi }}dBm{% else %}-{% endif %}</td>
+            <td>{% if d.uplink_confirm_rate is not None %}{{ d.uplink_confirm_rate }}% <small>({{ d.txok|default:0 }}/{{ d.txsent }})</small>{% else %}-{% endif %}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p><small>{% trans "No diagnostics reported yet." %}</small></p>
+    {% endif %}
+</details>
+{% endif %}
+
 <div class="chart-grid">
     <div class="chart-panel chart-panel-full">
         <h5>{% trans "Device status" %}</h5>

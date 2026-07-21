@@ -224,7 +224,25 @@
             {% csrf_token %}
             <button type="submit" class="outline btn-sm">{% trans "Request diagnostics" %}</button>
         </form>
+        {% if supports_confirm_uplink %}
+        <form hx-post="{% url 'devices:set_confirm_uplink' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML" style="margin:0;">
+            {% csrf_token %}
+            <input type="hidden" name="value" value="{% if confirm_uplink_on %}0{% else %}1{% endif %}">
+            <button type="submit" class="outline btn-sm">
+                {% if confirm_uplink_on %}{% trans "Disable uplink confirmation" %}{% else %}{% trans "Enable uplink confirmation" %}{% endif %}
+            </button>
+        </form>
+        {% endif %}
     </div>
+    {% if supports_confirm_uplink %}
+    <p><small>
+        {% if confirm_uplink_on %}
+        {% trans "Uplink-delivery confirmation is ON: the device confirms each publish (broker loopback) and reports the delivery rate every wake. Costs extra wakes — disable it once troubleshooting is done." %}
+        {% else %}
+        {% trans "Uplink-delivery confirmation is OFF (default). Enable it to measure end-to-end publish delivery (txok/txsent); it costs extra wakes, so use it only for troubleshooting." %}
+        {% endif %}
+    </small></p>
+    {% endif %}
     {% if diag_logs %}
     <div class="table-responsive">
     <table>
@@ -235,13 +253,14 @@
             <th title="{% trans 'Consecutive connect failures' %}">{% trans "Miss" %}</th>
             <th title="{% trans 'Publish counter' %}">{% trans "Seq" %}</th>
             <th>{% trans "Wake" %}</th><th>{% trans "RSSI" %}</th><th>{% trans "Heap" %}</th>
+            <th title="{% trans 'Confirmed uplink delivery rate (txok/txsent)' %}">{% trans "Uplink" %}</th>
         </tr></thead>
         <tbody>
         {% for d in diag_logs %}
         <tr>
             <td><small>{{ d.time|date:"m-d H:i" }}</small></td>
             <td>{% if d.level == "error" %}<span class="badge badge-offline">{{ d.level }}</span>{% elif d.level == "warning" %}<span class="badge badge-legacy">{{ d.level }}</span>{% else %}{{ d.level }}{% endif %}</td>
-            <td><small>{{ d.message|default:"-" }}</small></td>
+            <td><small>{{ d.message|diag_message_label }}</small></td>
             <td><small>{{ d.reset_cause|reset_cause_label }}</small></td>
             <td>{{ d.boot|default:"-" }}</td>
             <td>{{ d.miss|default:"-" }}</td>
@@ -249,6 +268,7 @@
             <td>{% if d.wake_ms is not None %}{{ d.wake_ms }}ms{% else %}-{% endif %}</td>
             <td>{% if d.rssi is not None %}{{ d.rssi }}dBm{% else %}-{% endif %}</td>
             <td>{% if d.heap is not None %}{{ d.heap }}B{% else %}-{% endif %}</td>
+            <td>{% if d.uplink_confirm_rate is not None %}{{ d.uplink_confirm_rate }}%{% else %}-{% endif %}</td>
         </tr>
         {% endfor %}
         </tbody>

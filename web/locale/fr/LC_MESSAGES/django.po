@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sensor_server 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-11 14:58+0200\n"
+"POT-Creation-Date: 2026-07-21 22:10+0200\n"
 "PO-Revision-Date: 2026-03-17 00:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
@@ -241,7 +241,6 @@ msgid "Granted"
 msgstr "Accordé"
 
 #: accounts/templates/accounts/user_list.html:93
-#| msgid "Success"
 msgid "No access"
 msgstr "Aucun accès"
 
@@ -264,7 +263,8 @@ msgstr "Impossible de modifier le compte super-administrateur."
 #: api/admin.py:31
 #, python-format
 msgid "API key created. Copy it now — it will not be shown again: %(token)s"
-msgstr "Clé API créée. Copiez-la maintenant — elle ne sera plus affichée : %(token)s"
+msgstr ""
+"Clé API créée. Copiez-la maintenant — elle ne sera plus affichée : %(token)s"
 
 #: catalog/admin.py:14
 msgid "Markdown reference"
@@ -274,7 +274,10 @@ msgstr "Référence Markdown"
 msgid ""
 "Markdown. Use a ```mermaid``` fenced block for diagrams, and reference "
 "uploaded images by their URL (shown next to each image below)."
-msgstr "Markdown. Utilisez un bloc de code ```mermaid``` pour les diagrammes, et référencez les images téléversées par leur URL (indiquée à côté de chaque image ci-dessous)."
+msgstr ""
+"Markdown. Utilisez un bloc de code ```mermaid``` pour les diagrammes, et "
+"référencez les images téléversées par leur URL (indiquée à côté de chaque "
+"image ci-dessous)."
 
 #: catalog/models.py:18 catalog/templates/catalog/detail.html:20
 #: catalog/templates/catalog/list.html:20
@@ -283,7 +286,6 @@ msgstr "Brouillon"
 
 #: catalog/models.py:19 catalog/templates/catalog/detail.html:18
 #: catalog/templates/catalog/list.html:18
-#| msgid "Action"
 msgid "Active"
 msgstr "Actif"
 
@@ -323,7 +325,6 @@ msgstr "Matériel associé"
 
 #: catalog/templates/catalog/detail.html:36
 #: ota/templates/ota/firmware_overview.html:3 templates/base.html:100
-#| msgid "Firmware version:"
 msgid "Firmwares"
 msgstr "Firmwares"
 
@@ -342,7 +343,6 @@ msgid "download"
 msgstr "télécharger"
 
 #: catalog/templates/catalog/detail.html:46
-#| msgid "firmware update"
 msgid "no firmware published"
 msgstr "aucun firmware publié"
 
@@ -351,7 +351,6 @@ msgid "No revision registered."
 msgstr "Aucune révision enregistrée."
 
 #: catalog/templates/catalog/detail.html:55
-#| msgid "Rename device"
 msgid "Real devices"
 msgstr "Appareils réels"
 
@@ -383,19 +382,19 @@ msgstr "En ligne"
 msgid "Offline"
 msgstr "Hors ligne"
 
-#: devices/models.py:175
+#: devices/models.py:268
 msgid "Pending"
 msgstr "En attente"
 
-#: devices/models.py:176
+#: devices/models.py:269
 msgid "Success"
 msgstr "Succès"
 
-#: devices/models.py:177
+#: devices/models.py:270
 msgid "Failed"
 msgstr "Échec"
 
-#: devices/models.py:178
+#: devices/models.py:271
 msgid "Timeout"
 msgstr "Délai dépassé"
 
@@ -526,7 +525,9 @@ msgstr "Emplacement"
 
 #: devices/templates/devices/_device_tables.html:81
 msgid "Pre-OTA firmware — reflash manually to enable over-the-air updates"
-msgstr "Firmware pré-OTA — reflashez manuellement pour activer les mises à jour à distance"
+msgstr ""
+"Firmware pré-OTA — reflashez manuellement pour activer les mises à jour à "
+"distance"
 
 #: devices/templates/devices/_device_tables.html:81
 #: devices/templates/devices/device_admin.html:49
@@ -608,7 +609,10 @@ msgid ""
 "This device runs firmware from before the OTA rollout (no OTA support and no "
 "registered hardware code). Reflash it manually with a published firmware to "
 "enable over-the-air updates."
-msgstr "Cet appareil exécute un firmware antérieur au déploiement OTA (aucun support OTA ni code matériel enregistré). Reflashez-le manuellement avec un firmware publié pour activer les mises à jour à distance."
+msgstr ""
+"Cet appareil exécute un firmware antérieur au déploiement OTA (aucun support "
+"OTA ni code matériel enregistré). Reflashez-le manuellement avec un firmware "
+"publié pour activer les mises à jour à distance."
 
 #: devices/templates/devices/device_admin.html:55
 msgid "Firmware update recommended."
@@ -721,7 +725,8 @@ msgstr "Firmware (OTA)"
 
 #: devices/templates/devices/device_admin.html:195
 msgid "Push a compatible firmware image to this device over the air."
-msgstr "Envoyer une image de firmware compatible à cet appareil, à distance (OTA)."
+msgstr ""
+"Envoyer une image de firmware compatible à cet appareil, à distance (OTA)."
 
 #: devices/templates/devices/device_admin.html:197
 msgid "Push this firmware to the device?"
@@ -738,51 +743,176 @@ msgstr "Envoyer le firmware"
 #: devices/templates/devices/device_admin.html:209
 msgid ""
 "No compatible firmware has been published for this device's hardware yet."
-msgstr "Aucun firmware compatible n'a encore été publié pour le matériel de cet appareil."
+msgstr ""
+"Aucun firmware compatible n'a encore été publié pour le matériel de cet "
+"appareil."
 
-#: devices/templates/devices/device_admin.html:218
+#: devices/templates/devices/device_admin.html:216
+msgid "Health & diagnostics"
+msgstr "Santé et diagnostics"
+
+#: devices/templates/devices/device_admin.html:217
+msgid ""
+"This device reports diagnostics on demand. The snapshot below is published "
+"automatically on a problem, or when requested here."
+msgstr ""
+"Cet appareil rapporte ses diagnostics à la demande. L'instantané ci-dessous "
+"est publié automatiquement en cas de problème, ou lorsqu'il est demandé ici."
+
+#: devices/templates/devices/device_admin.html:221
+msgid "Refresh health state"
+msgstr "Rafraîchir l'état de santé"
+
+#: devices/templates/devices/device_admin.html:225
+msgid "Request diagnostics"
+msgstr "Demander les diagnostics"
+
+#: devices/templates/devices/device_admin.html:232
+msgid "Disable uplink confirmation"
+msgstr "Désactiver la confirmation d'uplink"
+
+#: devices/templates/devices/device_admin.html:232
+msgid "Enable uplink confirmation"
+msgstr "Activer la confirmation d'uplink"
+
+#: devices/templates/devices/device_admin.html:240
+msgid ""
+"Uplink-delivery confirmation is ON: the device confirms each publish (broker "
+"loopback) and reports the delivery rate every wake. Costs extra wakes — "
+"disable it once troubleshooting is done."
+msgstr "La confirmation de livraison montante est ACTIVÉE : l'appareil confirme chaque publication (boucle broker) et rapporte le taux de livraison à chaque réveil. Cela coûte des réveils supplémentaires — désactivez-la une fois le diagnostic terminé."
+
+#: devices/templates/devices/device_admin.html:242
+msgid ""
+"Uplink-delivery confirmation is OFF (default). Enable it to measure end-to-"
+"end publish delivery (txok/txsent); it costs extra wakes, so use it only for "
+"troubleshooting."
+msgstr "La confirmation de livraison montante est DÉSACTIVÉE (par défaut). Activez-la pour mesurer la livraison de bout en bout des publications (txok/txsent) ; cela coûte des réveils supplémentaires, à n'utiliser que pour le diagnostic."
+
+#: devices/templates/devices/device_admin.html:250
+#: devices/templates/devices/device_history.html:134
+msgid "Time"
+msgstr "Heure"
+
+#: devices/templates/devices/device_admin.html:250
+#: devices/templates/devices/device_history.html:135
+msgid "Level"
+msgstr "Niveau"
+
+#: devices/templates/devices/device_admin.html:250
+#: devices/templates/devices/device_history.html:136
+msgid "Message"
+msgstr "Message"
+
+#: devices/templates/devices/device_admin.html:251
+#: devices/templates/devices/device_history.html:137
+msgid "Reset cause"
+msgstr "Cause du redémarrage"
+
+#: devices/templates/devices/device_admin.html:251
+#: devices/templates/devices/device_history.html:137
+msgid "Reset"
+msgstr "Redémarrage"
+
+#: devices/templates/devices/device_admin.html:252
+msgid "Total boots"
+msgstr "Démarrages totaux"
+
+#: devices/templates/devices/device_admin.html:252
+msgid "Boots"
+msgstr "Démarrages"
+
+#: devices/templates/devices/device_admin.html:253
+#: devices/templates/devices/device_history.html:138
+msgid "Consecutive connect failures"
+msgstr "Échecs de connexion consécutifs"
+
+#: devices/templates/devices/device_admin.html:253
+#: devices/templates/devices/device_history.html:138
+msgid "Miss"
+msgstr "Ratés"
+
+#: devices/templates/devices/device_admin.html:254
+#, fuzzy
+#| msgid "Publish interval:"
+msgid "Publish counter"
+msgstr "Intervalle de publication :"
+
+#: devices/templates/devices/device_admin.html:254
+msgid "Seq"
+msgstr "Seq"
+
+#: devices/templates/devices/device_admin.html:255
+msgid "Wake"
+msgstr "Réveil"
+
+#: devices/templates/devices/device_admin.html:255
+#: devices/templates/devices/device_history.html:139 readings/metrics.py:16
+msgid "RSSI"
+msgstr "RSSI"
+
+#: devices/templates/devices/device_admin.html:255
+msgid "Heap"
+msgstr "Tas"
+
+#: devices/templates/devices/device_admin.html:256
+#: devices/templates/devices/device_history.html:140
+msgid "Confirmed uplink delivery rate (txok/txsent)"
+msgstr "Taux de livraison montante confirmée (txok/txsent)"
+
+#: devices/templates/devices/device_admin.html:256
+#: devices/templates/devices/device_history.html:140
+msgid "Uplink"
+msgstr "Liaison montante"
+
+#: devices/templates/devices/device_admin.html:278
+#: devices/templates/devices/device_history.html:158
+msgid "No diagnostics reported yet."
+msgstr "Aucun diagnostic rapporté pour le moment."
+
+#: devices/templates/devices/device_admin.html:287
 msgid "Approve device"
 msgstr "Approuver l'appareil"
 
-#: devices/templates/devices/device_admin.html:222
+#: devices/templates/devices/device_admin.html:291
 msgid "Send command"
 msgstr "Envoyer une commande"
 
-#: devices/templates/devices/device_admin.html:227
+#: devices/templates/devices/device_admin.html:296
 msgid "Action:"
 msgstr "Action :"
 
-#: devices/templates/devices/device_admin.html:238
+#: devices/templates/devices/device_admin.html:307
 msgid "Parameters:"
 msgstr "Paramètres :"
 
-#: devices/templates/devices/device_admin.html:239
+#: devices/templates/devices/device_admin.html:308
 msgid "value1, value2, ..."
 msgstr "valeur1, valeur2, ..."
 
-#: devices/templates/devices/device_admin.html:241
+#: devices/templates/devices/device_admin.html:310
 msgid "Send"
 msgstr "Envoyer"
 
-#: devices/templates/devices/device_admin.html:248
+#: devices/templates/devices/device_admin.html:317
 msgid "Command history"
 msgstr "Historique des commandes"
 
-#: devices/templates/devices/device_admin.html:255
+#: devices/templates/devices/device_admin.html:324
 msgid "Danger zone"
 msgstr "Zone de danger"
 
-#: devices/templates/devices/device_admin.html:260
+#: devices/templates/devices/device_admin.html:329
 msgid "Revoke approval"
 msgstr "Révoquer l'approbation"
 
-#: devices/templates/devices/device_admin.html:263
+#: devices/templates/devices/device_admin.html:332
 #: devices/templates/devices/device_delete_confirm.html:3
 #: devices/templates/devices/device_delete_confirm.html:6
 msgid "Delete device"
 msgstr "Supprimer l'appareil"
 
-#: devices/templates/devices/device_admin.html:282
+#: devices/templates/devices/device_admin.html:351
 msgid "Expected:"
 msgstr "Attendu :"
 
@@ -938,15 +1068,27 @@ msgid "All metrics"
 msgstr "Toutes les métriques"
 
 #: devices/templates/devices/device_history.html:128
+msgid "Diagnostic log"
+msgstr "Journal de diagnostics"
+
+#: devices/templates/devices/device_history.html:129
+msgid ""
+"Health snapshots reported by the device (auto-published on a problem, or on "
+"demand). Newest first."
+msgstr ""
+"Instantanés de santé rapportés par l'appareil (publiés automatiquement en "
+"cas de problème, ou à la demande). Les plus récents en premier."
+
+#: devices/templates/devices/device_history.html:165
 #: readings/templates/readings/overview.html:80
 msgid "Device status"
 msgstr "Statut de l'appareil"
 
-#: devices/templates/devices/device_history.html:137
+#: devices/templates/devices/device_history.html:174
 msgid "No metrics available for this device."
 msgstr "Aucune mesure disponible pour cet appareil."
 
-#: devices/templates/devices/device_history.html:327
+#: devices/templates/devices/device_history.html:364
 msgid "Delete selected readings? This cannot be undone."
 msgstr "Supprimer les mesures sélectionnées ? Cette action est irréversible."
 
@@ -1007,50 +1149,106 @@ msgstr "<strong>%(name)s</strong> sera supprimé après la fusion."
 msgid "Merge"
 msgstr "Fusionner"
 
-#: devices/views.py:106 readings/metrics.py:11
+#: devices/templatetags/device_tags.py:72
+msgid "Nominal"
+msgstr "Nominal"
+
+#: devices/templatetags/device_tags.py:73
+msgid "Booted"
+msgstr "Démarré"
+
+#: devices/templatetags/device_tags.py:74
+msgid "Fair signal"
+msgstr "Signal correct"
+
+#: devices/templatetags/device_tags.py:75
+msgid "Weak signal"
+msgstr "Signal faible"
+
+#: devices/templatetags/device_tags.py:76
+msgid "Low memory"
+msgstr "Mémoire faible"
+
+#: devices/templatetags/device_tags.py:77
+msgid "Missed wake-ups"
+msgstr "Réveils manqués"
+
+#: devices/templatetags/device_tags.py:78
+msgid "Low battery"
+msgstr "Batterie faible"
+
+#: devices/templatetags/device_tags.py:79
+msgid "Critical battery"
+msgstr "Batterie critique"
+
+#: devices/templatetags/device_tags.py:80
+msgid "Reset: brownout"
+msgstr "Redémarrage : baisse de tension"
+
+#: devices/templatetags/device_tags.py:81
+msgid "Reset: panic"
+msgstr "Redémarrage : panique"
+
+#: devices/templatetags/device_tags.py:82
+msgid "Reset: watchdog"
+msgstr "Redémarrage : chien de garde"
+
+#: devices/templatetags/device_tags.py:84
+msgid "No capabilities response"
+msgstr "Pas de réponse aux capacités"
+
+#: devices/views.py:121 readings/metrics.py:11
 msgid "Temperature"
 msgstr "Température"
 
-#: devices/views.py:107 readings/metrics.py:12
+#: devices/views.py:122 readings/metrics.py:12
 msgid "Humidity"
 msgstr "Humidité"
 
-#: devices/views.py:108 readings/metrics.py:13
+#: devices/views.py:123 readings/metrics.py:13
 msgid "Pressure"
 msgstr "Pression"
 
-#: devices/views.py:172
+#: devices/views.py:199
 msgid "Unknown or incompatible firmware."
 msgstr "Firmware inconnu ou incompatible."
 
-#: devices/views.py:181 devices/views.py:254 devices/views.py:291
-#: devices/views.py:345
+#: devices/views.py:208 devices/views.py:281 devices/views.py:318
+#: devices/views.py:412 devices/views.py:452
 msgid "MQTT publish error."
 msgstr "Erreur d'envoi MQTT."
 
-#: devices/views.py:242
+#: devices/views.py:269
 msgid "Invalid metric."
 msgstr "Métrique invalide."
 
-#: devices/views.py:247 devices/views.py:284
+#: devices/views.py:274 devices/views.py:311
 msgid "Invalid value."
 msgstr "Valeur invalide."
 
-#: devices/views.py:279
+#: devices/views.py:306
 #, fuzzy
 #| msgid "Invalid time range."
 msgid "Invalid calibration key."
 msgstr "Plage de temps invalide."
 
-#: devices/views.py:329
+#: devices/views.py:358 devices/views.py:378
+msgid "Device does not support diagnostics."
+msgstr "Cet appareil ne prend pas en charge les diagnostics."
+
+#: devices/views.py:401
+msgid "Device does not support uplink confirmation."
+msgstr "Cet appareil ne prend pas en charge la confirmation d'uplink."
+
+#: devices/views.py:436
 msgid "Empty command."
 msgstr "Commande vide."
 
-#: devices/views.py:465
+#: devices/views.py:572
 msgid "Device ID cannot be empty."
 msgstr "L'ID de l'appareil ne peut pas être vide."
 
-#: devices/views.py:470
+#: devices/views.py:577
 msgid "Device ID may only contain letters, digits, hyphens, and underscores."
 msgstr ""
 "L'ID de l'appareil ne peut contenir que des lettres, chiffres, tirets et "
@@ -1058,7 +1256,9 @@ msgstr ""
 
 #: ota/models.py:18
 msgid "Hardware code must be exactly 8 uppercase alphanumeric characters."
-msgstr "Le code matériel doit comporter exactement 8 caractères alphanumériques majuscules."
+msgstr ""
+"Le code matériel doit comporter exactement 8 caractères alphanumériques "
+"majuscules."
 
 #: ota/models.py:39
 #, fuzzy
@@ -1097,7 +1297,6 @@ msgid "firmwares"
 msgstr "mise à jour firmware"
 
 #: ota/templates/ota/firmware_overview.html:6
-#| msgid "Publish interval:"
 msgid "Published firmwares"
 msgstr "Firmwares publiés"
 
@@ -1105,7 +1304,9 @@ msgstr "Firmwares publiés"
 msgid ""
 "Firmware images available for OTA delivery, grouped by hardware type and "
 "revision."
-msgstr "Images de firmware disponibles pour la diffusion OTA, regroupées par type de matériel et révision."
+msgstr ""
+"Images de firmware disponibles pour la diffusion OTA, regroupées par type de "
+"matériel et révision."
 
 #: ota/templates/ota/firmware_overview.html:16
 #, python-format
@@ -1170,10 +1371,6 @@ msgstr "Indice UV"
 msgid "Luminosity"
 msgstr "Luminosité"
 
-#: readings/metrics.py:16
-msgid "RSSI"
-msgstr "RSSI"
-
 #: readings/metrics.py:17
 msgid "Battery"
 msgstr "Batterie"
@@ -1214,12 +1411,10 @@ msgid "%(count)d readings deleted."
 msgstr "%(count)d mesures supprimées."
 
 #: sensor_server/urls.py:7 templates/admin/base_site.html:7
-#| msgid "Administration"
 msgid "IoT Sensors — Administration"
 msgstr "Capteurs IoT — Administration"
 
 #: sensor_server/urls.py:8 templates/admin/base_site.html:4
-#| msgid "IoT Sensors"
 msgid "IoT Sensors admin"
 msgstr "Admin Capteurs IoT"
 
@@ -1228,7 +1423,6 @@ msgid "IoT Sensors"
 msgstr "Capteurs IoT"
 
 #: templates/base.html:98
-#| msgid "IoT Sensors"
 msgid "Sensors"
 msgstr "Capteurs"
 
