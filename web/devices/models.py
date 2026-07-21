@@ -65,8 +65,14 @@ class Device(models.Model):
     # a plain int (no native composite FK to HardwareRevision).
     hw_rev = models.PositiveSmallIntegerField(null=True, blank=True)
     # Whether the device advertises OTA support (capabilities `ota`). The push
-    # UI is offered only for OTA-capable devices.
+    # UI is offered only for OTA-capable devices. The ota_update command is
+    # inferred from this flag, not the advertised command list.
     ota_capable = models.BooleanField(default=False)
+    # Whether the device runs the always-on diagnostics layer (capabilities
+    # `diag`). The diag commands (get_status/get_diag/set_confirm_uplink) are
+    # inferred from this flag, not the advertised command list. Surfaced as
+    # `supports_diag`.
+    diag_capable = models.BooleanField(default=False)
     # Server-side calibration mirror (per device_id), admin-editable. Re-pushed
     # to the device after a store wipe (capabilities `cal: 0`).
     calibration = models.JSONField(default=dict, blank=True)
@@ -168,17 +174,16 @@ class Device(models.Model):
 
     @property
     def supports_diag(self):
-        """True when the device advertises the on-demand diagnostics commands.
+        """True when the device runs the always-on diagnostics layer.
 
-        Detected purely from the advertised command list — there is no dedicated
-        capability flag. Diagnostics-capable firmware registers both
-        ``get_status`` and ``get_diag`` (see docs/diagnostics.md in the firmware
-        repo), so both appear in the ``commands`` message; older firmware lists
-        neither. Gating on this keeps the server from sending those commands to
-        a node that cannot answer them.
+        Detected from the ``diag`` capability flag (``"diag":1``), not the command
+        list: diagnostics-capable firmware hardcodes that flag and does NOT list
+        its core diag commands (``get_status``/``get_diag``/``set_confirm_uplink``)
+        in ``commands`` — the server infers them from the flag (see the firmware
+        docs/diagnostics.md). Gating on this keeps the server from sending those
+        commands to a node that cannot answer them.
         """
-        cmds = set((self.capabilities or {}).get("commands") or [])
-        return {"get_status", "get_diag"} <= cmds
+        return self.diag_capable
 
 
 class DeviceStatusLog(models.Model):

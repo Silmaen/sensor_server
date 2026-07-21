@@ -485,16 +485,18 @@ def handle_sensor_message(device_type: str, device_id: str, payload: bytes):
         request_commands(device)
         # Resync latched health on wake-up for diag-capable devices: the
         # get_status reply (on the status topic) either clears a stale alert or
-        # re-asserts a real one. Gated on supports_diag — older firmware, which
-        # does not advertise get_status/get_diag, is never sent this command.
+        # re-asserts a real one. Gated on supports_diag (the diag capability
+        # flag) — older firmware without it is never sent this command.
         if device.supports_diag:
             request_status(device)
     elif device.capabilities_requested_at is not None:
-        # Check for capabilities response timeout. Deep-sleep devices only see
-        # a queued request on their next wake, so allow at least two publish
-        # intervals before flagging a missing response.
+        # Check for capabilities response timeout. Deep-sleep devices only see a
+        # queued request on their next wake, and a slow node may answer only after
+        # a couple of wakes — so allow three publish intervals (matching the
+        # offline-detection window) before flagging a missing response, otherwise
+        # a still-online device gets a spurious no_capabilities_response error.
         elapsed = (now - device.capabilities_requested_at).total_seconds()
-        timeout = max(CAPABILITIES_RESPONSE_TIMEOUT, 2 * (device.publish_interval or 0))
+        timeout = max(CAPABILITIES_RESPONSE_TIMEOUT, 3 * (device.publish_interval or 0))
         if elapsed > timeout:
             device.alert_level = "error"
             device.alert_message = NO_CAPABILITIES_ALERT
@@ -717,6 +719,12 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
     if isinstance(ota, bool) or (isinstance(ota, int) and ota in (0, 1)):
         device.ota_capable = bool(ota)
 
+    # diag: always-on diagnostics layer flag. The server infers the diag commands
+    # (get_status/get_diag/set_confirm_uplink) from it, not the command list.
+    diag = data.get("diag")
+    if isinstance(diag, bool) or (isinstance(diag, int) and diag in (0, 1)):
+        device.diag_capable = bool(diag)
+
     # cal: calibration store-empty flag. 0 → wiped store (new board / factory
     # reset / chip swap); the mirror, if any, is re-pushed after saving.
     cal = data.get("cal")
@@ -783,17 +791,17 @@ def handle_capabilities_message(device_type: str, device_id: str, payload: bytes
             alert_level="", alert_message="",
         )
     logger.info(
-        "capabilities %s/%s -> stored: id=%s hw=%s rev=%s ota=%s fw=%s interval=%s metrics=%s commands=%s (pending_request=%s, cleared_timeout=%s)",
+        "capabilities %s/%s -> stored: id=%s hw=%s rev=%s ota=%s diag=%s fw=%s interval=%s metrics=%s commands=%s (pending_request=%s, cleared_timeout=%s)",
         device_type, device_id,
         device.hardware_id, device.hardware_code_id or "-", device.hw_rev,
-        device.ota_capable, device.fw_version or "-",
+        device.ota_capable, device.diag_capable, device.fw_version or "-",
         device.publish_interval,
         capabilities.get("metrics"), capabilities.get("commands"),
         was_pending, had_timeout_alert,
     )
     device.save(update_fields=[
-        "hardware_id", "hardware_code", "hw_rev", "ota_capable", "fw_version",
-        "publish_interval", "capabilities", "capabilities_requested_at",
+        "hardware_id", "hardware_code", "hw_rev", "ota_capable", "diag_capable",
+        "fw_version", "publish_interval", "capabilities", "capabilities_requested_at",
         "alert_level", "alert_message", "alert_updated_at",
     ])
 

@@ -96,13 +96,10 @@ def device_history_view(request, device_id):
     prev_id, next_id = _prev_next_device(device_id)
 
     # Diagnostics message log, admins only: the most recent diag snapshots (level
-    # + message + key detail). Same source as the device admin page's technical
-    # table, surfaced here so an admin reading the charts sees the health history
-    # without leaving the page.
-    diag_logs = (
-        list(device.diag_logs.all()[:DIAG_LOG_LIMIT])
-        if is_admin and device.supports_diag else []
-    )
+    # + message + key detail). Loaded whenever the device has produced any — a
+    # device auto-publishes diag on a problem even without advertising the
+    # on-demand commands, so this is NOT gated on supports_diag.
+    diag_logs = list(device.diag_logs.all()[:DIAG_LOG_LIMIT]) if is_admin else []
 
     return render(request, "devices/device_history.html", {
         "device": device,
@@ -159,13 +156,16 @@ def device_admin_view(request, device_id):
     # OTA: offer compatible firmwares only for OTA-capable devices.
     ota_firmwares = list(compatible_firmwares(device)) if device.ota_capable else []
 
-    # Diagnostics: recent health snapshots (diag topic), diag-capable devices only.
-    diag_logs = list(device.diag_logs.all()[:DIAG_LOG_LIMIT]) if device.supports_diag else []
+    # Diagnostics: recent health snapshots (diag topic). Loaded whenever the
+    # device has produced any — a device auto-publishes diag on a problem even
+    # without advertising the on-demand get_diag/get_status commands, so this is
+    # NOT gated on supports_diag.
+    diag_logs = list(device.diag_logs.all()[:DIAG_LOG_LIMIT])
 
-    # Uplink-delivery confirmation toggle (set_confirm_uplink, ESP32 opt-in). The
-    # current on/off state is inferred from the latest diag: the txsent/txok
-    # counters ride the payload only while the mode is on.
-    supports_confirm_uplink = "set_confirm_uplink" in device_commands
+    # Uplink-delivery confirmation toggle (set_confirm_uplink): a core diag
+    # command, so it is offered on any diagnostics-capable device (inferred from
+    # the diag flag, not the command list). Current on/off state is inferred from
+    # the latest diag: the txsent/txok counters ride the payload only while on.
     confirm_uplink_on = bool(diag_logs and diag_logs[0].txsent is not None)
 
     return render(request, "devices/device_admin.html", {
@@ -182,7 +182,6 @@ def device_admin_view(request, device_id):
         "calibration_mirror": mirror,
         "ota_firmwares": ota_firmwares,
         "diag_logs": diag_logs,
-        "supports_confirm_uplink": supports_confirm_uplink,
         "confirm_uplink_on": confirm_uplink_on,
     })
 
@@ -389,15 +388,16 @@ def device_request_diag_view(request, device_id):
 def device_set_confirm_uplink_view(request, device_id):
     """Toggle the device's uplink-delivery confirmation diagnostic (set_confirm_uplink).
 
-    ESP32-only opt-in diagnostic: while on, the device confirms each publish via
-    broker loopback and reports txsent/txok counters in its diag payload (and
-    publishes diag every wake). Gated on the command being advertised. Logged as
-    a pending command; the device acks it, resolving the log entry.
+    Opt-in diagnostic: while on, the device confirms each publish via broker
+    loopback and reports txsent/txok counters in its diag payload (and publishes
+    diag every wake). A core diag command, so it is gated on supports_diag (the
+    diag capability flag), not the advertised command list. Logged as a pending
+    command; the device acks it, resolving the log entry.
     """
     device = get_object_or_404(Device, device_id=device_id)
     if request.method != "POST":
         return HttpResponseBadRequest()
-    if "set_confirm_uplink" not in (device.capabilities or {}).get("commands", []):
+    if not device.supports_diag:
         return HttpResponseBadRequest(_("Device does not support uplink confirmation."))
 
     value = 1 if request.POST.get("value") == "1" else 0

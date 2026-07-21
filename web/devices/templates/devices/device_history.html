@@ -123,11 +123,10 @@
 </details>
 {% endif %}
 
-{% if is_admin and device.supports_diag %}
+{% if is_admin and diag_logs %}
 <details class="custom-range">
     <summary>{% trans "Diagnostic log" %}</summary>
     <p><small>{% trans "Health snapshots reported by the device (auto-published on a problem, or on demand). Newest first." %}</small></p>
-    {% if diag_logs %}
     <div class="table-responsive">
     <table>
         <thead><tr>
@@ -154,9 +153,6 @@
         </tbody>
     </table>
     </div>
-    {% else %}
-    <p><small>{% trans "No diagnostics reported yet." %}</small></p>
-    {% endif %}
 </details>
 {% endif %}
 

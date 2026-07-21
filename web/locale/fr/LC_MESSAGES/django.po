@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sensor_server 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-21 22:10+0200\n"
+"POT-Creation-Date: 2026-07-21 22:35+0200\n"
 "PO-Revision-Date: 2026-03-17 00:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
@@ -751,7 +751,7 @@ msgstr ""
 msgid "Health & diagnostics"
 msgstr "Santé et diagnostics"
 
-#: devices/templates/devices/device_admin.html:217
+#: devices/templates/devices/device_admin.html:218
 msgid ""
 "This device reports diagnostics on demand. The snapshot below is published "
 "automatically on a problem, or when requested here."
@@ -759,160 +759,173 @@ msgstr ""
 "Cet appareil rapporte ses diagnostics à la demande. L'instantané ci-dessous "
 "est publié automatiquement en cas de problème, ou lorsqu'il est demandé ici."
 
-#: devices/templates/devices/device_admin.html:221
+#: devices/templates/devices/device_admin.html:220
+msgid ""
+"This device auto-publishes diagnostics on a problem, but does not support on-"
+"demand requests."
+msgstr "Cet appareil publie automatiquement des diagnostics en cas de problème, mais ne prend pas en charge les requêtes à la demande."
+
+#: devices/templates/devices/device_admin.html:226
 msgid "Refresh health state"
 msgstr "Rafraîchir l'état de santé"
 
-#: devices/templates/devices/device_admin.html:225
+#: devices/templates/devices/device_admin.html:230
 msgid "Request diagnostics"
 msgstr "Demander les diagnostics"
 
-#: devices/templates/devices/device_admin.html:232
+#: devices/templates/devices/device_admin.html:238
 msgid "Disable uplink confirmation"
 msgstr "Désactiver la confirmation d'uplink"
 
-#: devices/templates/devices/device_admin.html:232
+#: devices/templates/devices/device_admin.html:238
 msgid "Enable uplink confirmation"
 msgstr "Activer la confirmation d'uplink"
 
-#: devices/templates/devices/device_admin.html:240
+#: devices/templates/devices/device_admin.html:246
 msgid ""
 "Uplink-delivery confirmation is ON: the device confirms each publish (broker "
 "loopback) and reports the delivery rate every wake. Costs extra wakes — "
 "disable it once troubleshooting is done."
-msgstr "La confirmation de livraison montante est ACTIVÉE : l'appareil confirme chaque publication (boucle broker) et rapporte le taux de livraison à chaque réveil. Cela coûte des réveils supplémentaires — désactivez-la une fois le diagnostic terminé."
+msgstr ""
+"La confirmation de livraison montante est ACTIVÉE : l'appareil confirme "
+"chaque publication (boucle broker) et rapporte le taux de livraison à chaque "
+"réveil. Cela coûte des réveils supplémentaires — désactivez-la une fois le "
+"diagnostic terminé."
 
-#: devices/templates/devices/device_admin.html:242
+#: devices/templates/devices/device_admin.html:248
 msgid ""
 "Uplink-delivery confirmation is OFF (default). Enable it to measure end-to-"
 "end publish delivery (txok/txsent); it costs extra wakes, so use it only for "
 "troubleshooting."
-msgstr "La confirmation de livraison montante est DÉSACTIVÉE (par défaut). Activez-la pour mesurer la livraison de bout en bout des publications (txok/txsent) ; cela coûte des réveils supplémentaires, à n'utiliser que pour le diagnostic."
+msgstr ""
+"La confirmation de livraison montante est DÉSACTIVÉE (par défaut). Activez-"
+"la pour mesurer la livraison de bout en bout des publications (txok/"
+"txsent) ; cela coûte des réveils supplémentaires, à n'utiliser que pour le "
+"diagnostic."
 
-#: devices/templates/devices/device_admin.html:250
-#: devices/templates/devices/device_history.html:134
+#: devices/templates/devices/device_admin.html:256
+#: devices/templates/devices/device_history.html:133
 msgid "Time"
 msgstr "Heure"
 
-#: devices/templates/devices/device_admin.html:250
-#: devices/templates/devices/device_history.html:135
+#: devices/templates/devices/device_admin.html:256
+#: devices/templates/devices/device_history.html:134
 msgid "Level"
 msgstr "Niveau"
 
-#: devices/templates/devices/device_admin.html:250
-#: devices/templates/devices/device_history.html:136
+#: devices/templates/devices/device_admin.html:256
+#: devices/templates/devices/device_history.html:135
 msgid "Message"
 msgstr "Message"
 
-#: devices/templates/devices/device_admin.html:251
-#: devices/templates/devices/device_history.html:137
+#: devices/templates/devices/device_admin.html:257
+#: devices/templates/devices/device_history.html:136
 msgid "Reset cause"
 msgstr "Cause du redémarrage"
 
-#: devices/templates/devices/device_admin.html:251
-#: devices/templates/devices/device_history.html:137
+#: devices/templates/devices/device_admin.html:257
+#: devices/templates/devices/device_history.html:136
 msgid "Reset"
 msgstr "Redémarrage"
 
-#: devices/templates/devices/device_admin.html:252
+#: devices/templates/devices/device_admin.html:258
 msgid "Total boots"
 msgstr "Démarrages totaux"
 
-#: devices/templates/devices/device_admin.html:252
+#: devices/templates/devices/device_admin.html:258
 msgid "Boots"
 msgstr "Démarrages"
 
-#: devices/templates/devices/device_admin.html:253
-#: devices/templates/devices/device_history.html:138
+#: devices/templates/devices/device_admin.html:259
+#: devices/templates/devices/device_history.html:137
 msgid "Consecutive connect failures"
 msgstr "Échecs de connexion consécutifs"
 
-#: devices/templates/devices/device_admin.html:253
-#: devices/templates/devices/device_history.html:138
+#: devices/templates/devices/device_admin.html:259
+#: devices/templates/devices/device_history.html:137
 msgid "Miss"
 msgstr "Ratés"
 
-#: devices/templates/devices/device_admin.html:254
+#: devices/templates/devices/device_admin.html:260
 #, fuzzy
 #| msgid "Publish interval:"
 msgid "Publish counter"
 msgstr "Intervalle de publication :"
 
-#: devices/templates/devices/device_admin.html:254
+#: devices/templates/devices/device_admin.html:260
 msgid "Seq"
 msgstr "Seq"
 
-#: devices/templates/devices/device_admin.html:255
+#: devices/templates/devices/device_admin.html:261
 msgid "Wake"
 msgstr "Réveil"
 
-#: devices/templates/devices/device_admin.html:255
-#: devices/templates/devices/device_history.html:139 readings/metrics.py:16
+#: devices/templates/devices/device_admin.html:261
+#: devices/templates/devices/device_history.html:138 readings/metrics.py:16
 msgid "RSSI"
 msgstr "RSSI"
 
-#: devices/templates/devices/device_admin.html:255
+#: devices/templates/devices/device_admin.html:261
 msgid "Heap"
 msgstr "Tas"
 
-#: devices/templates/devices/device_admin.html:256
-#: devices/templates/devices/device_history.html:140
+#: devices/templates/devices/device_admin.html:262
+#: devices/templates/devices/device_history.html:139
 msgid "Confirmed uplink delivery rate (txok/txsent)"
 msgstr "Taux de livraison montante confirmée (txok/txsent)"
 
-#: devices/templates/devices/device_admin.html:256
-#: devices/templates/devices/device_history.html:140
+#: devices/templates/devices/device_admin.html:262
+#: devices/templates/devices/device_history.html:139
 msgid "Uplink"
 msgstr "Liaison montante"
 
-#: devices/templates/devices/device_admin.html:278
-#: devices/templates/devices/device_history.html:158
+#: devices/templates/devices/device_admin.html:284
 msgid "No diagnostics reported yet."
 msgstr "Aucun diagnostic rapporté pour le moment."
 
-#: devices/templates/devices/device_admin.html:287
+#: devices/templates/devices/device_admin.html:293
 msgid "Approve device"
 msgstr "Approuver l'appareil"
 
-#: devices/templates/devices/device_admin.html:291
+#: devices/templates/devices/device_admin.html:297
 msgid "Send command"
 msgstr "Envoyer une commande"
 
-#: devices/templates/devices/device_admin.html:296
+#: devices/templates/devices/device_admin.html:302
 msgid "Action:"
 msgstr "Action :"
 
-#: devices/templates/devices/device_admin.html:307
+#: devices/templates/devices/device_admin.html:313
 msgid "Parameters:"
 msgstr "Paramètres :"
 
-#: devices/templates/devices/device_admin.html:308
+#: devices/templates/devices/device_admin.html:314
 msgid "value1, value2, ..."
 msgstr "valeur1, valeur2, ..."
 
-#: devices/templates/devices/device_admin.html:310
+#: devices/templates/devices/device_admin.html:316
 msgid "Send"
 msgstr "Envoyer"
 
-#: devices/templates/devices/device_admin.html:317
+#: devices/templates/devices/device_admin.html:323
 msgid "Command history"
 msgstr "Historique des commandes"
 
-#: devices/templates/devices/device_admin.html:324
+#: devices/templates/devices/device_admin.html:330
 msgid "Danger zone"
 msgstr "Zone de danger"
 
-#: devices/templates/devices/device_admin.html:329
+#: devices/templates/devices/device_admin.html:335
 msgid "Revoke approval"
 msgstr "Révoquer l'approbation"
 
-#: devices/templates/devices/device_admin.html:332
+#: devices/templates/devices/device_admin.html:338
 #: devices/templates/devices/device_delete_confirm.html:3
 #: devices/templates/devices/device_delete_confirm.html:6
 msgid "Delete device"
 msgstr "Supprimer l'appareil"
 
-#: devices/templates/devices/device_admin.html:351
+#: devices/templates/devices/device_admin.html:357
 msgid "Expected:"
 msgstr "Attendu :"
 
@@ -1079,16 +1092,16 @@ msgstr ""
 "Instantanés de santé rapportés par l'appareil (publiés automatiquement en "
 "cas de problème, ou à la demande). Les plus récents en premier."
 
-#: devices/templates/devices/device_history.html:165
+#: devices/templates/devices/device_history.html:161
 #: readings/templates/readings/overview.html:80
 msgid "Device status"
 msgstr "Statut de l'appareil"
 
-#: devices/templates/devices/device_history.html:174
+#: devices/templates/devices/device_history.html:170
 msgid "No metrics available for this device."
 msgstr "Aucune mesure disponible pour cet appareil."
 
-#: devices/templates/devices/device_history.html:364
+#: devices/templates/devices/device_history.html:360
 msgid "Delete selected readings? This cannot be undone."
 msgstr "Supprimer les mesures sélectionnées ? Cette action est irréversible."
 
@@ -1197,15 +1210,15 @@ msgstr "Redémarrage : chien de garde"
 msgid "No capabilities response"
 msgstr "Pas de réponse aux capacités"
 
-#: devices/views.py:121 readings/metrics.py:11
+#: devices/views.py:118 readings/metrics.py:11
 msgid "Temperature"
 msgstr "Température"
 
-#: devices/views.py:122 readings/metrics.py:12
+#: devices/views.py:119 readings/metrics.py:12
 msgid "Humidity"
 msgstr "Humidité"
 
-#: devices/views.py:123 readings/metrics.py:13
+#: devices/views.py:120 readings/metrics.py:13
 msgid "Pressure"
 msgstr "Pression"
 

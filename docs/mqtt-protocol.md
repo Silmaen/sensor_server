@@ -186,11 +186,12 @@ refresh state after a reconnect — without depending on the device to push an
 update on its own.
 
 **Semantics:**
-- Advertised: unlike `request_capabilities`, `get_status` and `get_diag` are
-  **registered commands** and appear in the device's `commands` list. The
-  server treats a device as **diagnostics-capable** only when **both** are
-  advertised (`Device.supports_diag`), and never sends them otherwise — older
-  firmware that lists neither is left alone.
+- Inferred, not listed: `get_status`, `get_diag` and `set_confirm_uplink` are
+  **core diagnostics commands** and do **not** appear in the device's `commands`
+  list. The server treats a device as **diagnostics-capable** from the `diag`
+  capability flag (`"diag":1` → `Device.diag_capable` / `Device.supports_diag`)
+  and never sends them otherwise — older firmware without the flag is left alone.
+  (Similarly `ota_update` is inferred from the `ota` flag, not the command list.)
 - One-shot request: published `retain=False, qos=1`, so it is queued for a
   deep-sleep device and delivered on its next wake.
 - The device **must always** answer, including with `{"level": "ok"}` when no
@@ -210,8 +211,9 @@ than waiting for a problem to trigger an automatic publish.
 
 **Response:** the device replies on its **`diag`** topic (see
 [Diagnostics](#6-diagnostics-diag)) with a full snapshot, whatever its current
-health level. Like `get_status` it is advertised in the `commands` list,
-published `retain=False, qos=1`, and gated on `Device.supports_diag`.
+health level. Like `get_status` it is a core command inferred from the `diag`
+flag (not the `commands` list), published `retain=False, qos=1`, and gated on
+`Device.supports_diag`.
 
 ### 4. Capabilities (`capabilities`)
 
@@ -226,6 +228,8 @@ published `retain=False, qos=1`, and gated on `Device.supports_diag`.
   "id": "ESP-ABCDEF123456",
   "hw": "esp8266-bme280-bat",
   "fw": "1.2.0",
+  "ota": 1,
+  "diag": 1,
   "intrvl": 60,
   "metrics": {"temperature": "°C", "humidity": "%", "pressure": "hPa"},
   "cmds": {
@@ -240,9 +244,11 @@ published `retain=False, qos=1`, and gated on `Device.supports_diag`.
 | `id`      | string |   Yes    | Unique chip serial (e.g. ESP chip ID), per unit. Stored as `hardware_id`. Max 256 chars. |
 | `hw`      | string |    No    | Hardware code, shared across identical hardware. Stored as `hw_code`. Max 64 chars.      |
 | `fw`      | string |    No    | Firmware version (semver). Stored as `fw_version`. Max 32 chars.     |
+| `ota`     | 0/1    |    No    | OTA support. Stored as `ota_capable`; the `ota_update` command is inferred from it (not listed in `cmds`). |
+| `diag`    | 0/1    |    No    | Always-on diagnostics layer. Stored as `diag_capable` (`Device.supports_diag`); the diag commands (`get_status`/`get_diag`/`set_confirm_uplink`) are inferred from it (not listed in `cmds`). |
 | `intrvl`  | number |   Yes    | Sensor publish frequency in seconds (1-86400).                       |
 | `metrics` | object |   Yes    | Metric name → unit string (`""` if no unit). Max 16 chars per unit.  |
-| `cmds`    | object |   Yes    | Command name → array of parameter definitions (`[]` if no params).   |
+| `cmds`    | object |   Yes    | Command name → array of parameter definitions (`[]` if no params). Excludes the flag-inferred core commands above. |
 
 **Firmware update detection:** `hw` and `fw` are optional for backward
 compatibility. A device that answers a capabilities request but reports

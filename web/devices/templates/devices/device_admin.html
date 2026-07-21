@@ -211,11 +211,16 @@
 </details>
 {% endif %}
 
-{% if device.supports_diag %}
+{% if device.supports_diag or diag_logs %}
 <details open>
     <summary>{% trans "Health & diagnostics" %}</summary>
+    {% if device.supports_diag %}
     <p><small>{% trans "This device reports diagnostics on demand. The snapshot below is published automatically on a problem, or when requested here." %}</small></p>
+    {% else %}
+    <p><small>{% trans "This device auto-publishes diagnostics on a problem, but does not support on-demand requests." %}</small></p>
+    {% endif %}
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;">
+        {% if device.supports_diag %}
         <form hx-post="{% url 'devices:request_status_diag' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML" style="margin:0;">
             {% csrf_token %}
             <button type="submit" class="outline btn-sm">{% trans "Refresh health state" %}</button>
@@ -224,7 +229,8 @@
             {% csrf_token %}
             <button type="submit" class="outline btn-sm">{% trans "Request diagnostics" %}</button>
         </form>
-        {% if supports_confirm_uplink %}
+        {% endif %}
+        {% if device.supports_diag %}
         <form hx-post="{% url 'devices:set_confirm_uplink' device.device_id %}" hx-target="#command-log" hx-swap="innerHTML" style="margin:0;">
             {% csrf_token %}
             <input type="hidden" name="value" value="{% if confirm_uplink_on %}0{% else %}1{% endif %}">
@@ -234,7 +240,7 @@
         </form>
         {% endif %}
     </div>
-    {% if supports_confirm_uplink %}
+    {% if device.supports_diag %}
     <p><small>
         {% if confirm_uplink_on %}
         {% trans "Uplink-delivery confirmation is ON: the device confirms each publish (broker loopback) and reports the delivery rate every wake. Costs extra wakes — disable it once troubleshooting is done." %}

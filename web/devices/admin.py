@@ -33,7 +33,7 @@ class DeviceAdmin(admin.ModelAdmin):
     )
     list_filter = ("device_type", OnlineFilter, "is_approved", "alert_level", "ota_capable")
     search_fields = ("device_id", "display_name", "location", "hardware_id", "hardware_code__hw_code")
-    readonly_fields = ("hardware_id", "hardware_code", "hw_rev", "ota_capable", "fw_version", "battery_percent")
+    readonly_fields = ("hardware_id", "hardware_code", "hw_rev", "ota_capable", "diag_capable", "fw_version", "battery_percent")
 
 
 @admin.register(CommandLog)
