@@ -1,4 +1,6 @@
-FROM python:3.12-slim
+# 3.13 is the highest Python supported by Django 5.2 (requirements pin django<6);
+# 3.14 needs Django 6.0, which is a framework upgrade, not an image bump.
+FROM python:3.13-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     supervisor gettext \

@@ -6,12 +6,15 @@ and provides a real-time web dashboard with device control capabilities.
 
 ## Stack
 
-| Service       | Image / Tech                      | Role                                 |
-|---------------|-----------------------------------|--------------------------------------|
-| `mosquitto`   | eclipse-mosquitto:2               | MQTT broker (device communication)   |
-| `timescaledb` | timescale/timescaledb:latest-pg16 | Time-series + relational database    |
-| `redis`       | redis:7-alpine                    | Django Channels layer + cache        |
-| `web`         | Python 3.12 / Django / Daphne     | Web app, API, WebSocket, MQTT bridge |
+| Service       | Image / Tech                       | Role                                  |
+|---------------|------------------------------------|---------------------------------------|
+| `mosquitto`   | eclipse-mosquitto:2.1.2-alpine     | MQTT broker (device communication)    |
+| `timescaledb` | timescale/timescaledb:2.29.1-pg16  | Time-series + relational database     |
+| `redis`       | redis:8.10.0-alpine                | Django Channels layer + cache         |
+| `web`         | Python 3.13 / Django 5.2 / Daphne  | Web app, API, WebSocket, MQTT bridge  |
+| `nginx`       | nginx:1.30.4-alpine                | Serves static + media (`/fw/`), proxy |
+
+Tags are pinned to an exact version — see [Updating](#updating).
 
 ## Features
 
@@ -139,6 +142,82 @@ All persistent data is stored under `DATA_DIR`:
 | `${DATA_DIR}/mosquitto/`   | MQTT persistence + generated passwd |
 | `${DATA_DIR}/redis/`       | Redis dump                          |
 | `${DATA_DIR}/logs/`        | Django application logs             |
+
+## Deploying and updating
+
+`./deploy.sh` is the single entry point (it replaces the former `update.sh`): it pulls
+the repository and the images, rebuilds, starts, waits for every service to report
+healthy, and updates the TimescaleDB extension if the image moved. Migrations,
+`collectstatic` and `compilemessages` are left to `web/entrypoint.sh`, which runs them
+when the container starts.
+
+```bash
+./deploy.sh                    # full deployment
+./deploy.sh --no-pull          # deploy the files on disk, fetch nothing
+./deploy.sh --dry-run          # print what would run
+./deploy.sh check              # is a commit pending? exit 0 = no, 10 = yes, 1 = cannot tell
+./deploy.sh status | logs [svc] | stop | restart
+./deploy.sh timescale-update   # the extension step, alone
+./deploy.sh help               # the full list
+```
+
+The name and the mode are part of a contract, not a preference: the homelab console's
+per-stack deploy button publishes `deploy <machine> <project>`, and the machine looks
+the script up itself — `home-server-stacks` `homelab-probe` accepts `deploy.sh` (first
+choice), `deploy` or `update.sh`, next to the compose file, **executable and
+git-tracked**, and the wake agent runs it with no arguments, stdin on `/dev/null`, as
+the owner of the checkout. So `./deploy.sh` with no argument must be the whole
+deployment, and it must never ask a question. `chmod +x` and a commit are what make the
+button appear.
+
+Image tags are pinned to an **exact version** in `docker-compose.yml`, so a version
+change is a reviewable diff rather than a side effect of a pull.
+
+Every service also carries [wud](https://github.com/getwud/wud) labels, because the
+homelab watches container versions centrally (`selene/monitoring` in
+`home-server-stacks`) and reports what is behind. Left unlabelled, wud takes the
+*greatest* tag of a repository, which turns that report into noise — a beta, a foreign
+variant, or a 401 on an image that exists in no registry:
+
+| Service       | `wud` label                              | Reported                | Out of scope, on purpose                            |
+|---------------|------------------------------------------|-------------------------|-----------------------------------------------------|
+| `mosquitto`   | `wud.tag.include: ^2\.1\.\d+-alpine$`    | 2.1 patches             | 2.2/3.0 — 3.0 removes `password_file` (see below)   |
+| `timescaledb` | `wud.tag.include: ^\d+\.\d+\.\d+-pg16$`  | TimescaleDB releases    | `-pg17`/`-pg18` — a `pg_upgrade`, not a pull; `-oss` |
+| `redis`       | `wud.tag.include: ^8\.\d+\.\d+-alpine$`  | 8.x releases            | Redis 9, `32bit-stretch`, `-alpine3.x` duplicates    |
+| `nginx`       | `wud.tag.include: ^1\.30\.\d+-alpine$`   | stable-branch patches   | mainline (odd minors, always "greater")              |
+| `web`         | `wud.watch: 'false'`                     | nothing                 | built here, so absent from every registry            |
+
+Two things to know when editing those labels:
+
+- **Write `$$`, not `$`** — compose interpolates `$`, and a single one silently
+  corrupts the regex.
+- **Bumping a pin means bumping its regex** on the same line of thought. That is the
+  point: the versions the regex excludes are the ones that deserve release notes
+  before a deployment.
+
+Mosquitto 2.1 deprecated `password_file` (still used by `mosquitto/mosquitto.conf`) in
+favour of the `password-file` plugin, and announced its removal for 3.0. The plugin path
+is not usable in the official image yet, so the deprecated option stays — and the wud
+regex stops before the major that would break it.
+
+### After a TimescaleDB image bump
+
+The image ships the extension, but the database keeps the version it was created with,
+so a new image needs one manual step. It must be the **first statement of a fresh
+session**:
+
+```bash
+docker compose exec timescaledb \
+  psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c 'ALTER EXTENSION timescaledb UPDATE;'
+
+# verify: installed version should now match the image
+docker compose exec timescaledb psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  -Atc "select extversion from pg_extension where extname='timescaledb'"
+```
+
+Skipping it is not fatal — the database keeps working on the older extension — but the
+gap widens silently, and continuous aggregates and compression policies are exactly the
+features whose fixes live in those releases.
 
 ## Management commands
 

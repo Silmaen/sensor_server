@@ -21,6 +21,11 @@ stores time-series in TimescaleDB, serves a real-time dashboard with device cont
 ## Commands
 
 ```bash
+# Deploy / update (single entry point, also what the homelab console's button runs)
+./deploy.sh                 # pull + build + up + wait healthy + TimescaleDB extension
+./deploy.sh check           # pending commit? exit 0 = no, 10 = yes, 1 = cannot tell
+./deploy.sh help            # every subcommand
+
 # Start everything
 docker compose up --build
 
@@ -66,5 +71,8 @@ curl http://localhost:8000/healthz/
 - **Read-only API**: `/api/v1/` (devices, raw readings, hourly/daily aggregates) for external services. Auth via `Authorization: Bearer <token>` against the `api.ApiKey` model (SHA-256 hashed, managed in Django admin). Exposes approved devices only; query params bounded. Spec in `docs/read-api.md`
 - **Security**: CSRF on all forms, logout is POST-only, WebSocket origin validation, MQTT identifier sanitization, `SECURE_*` settings enforced when `DEBUG=False`
 - **Logging**: structured JSON to file (`sensor_server.logging.JsonFormatter`), plain text to console
+- **Image pins**: every registry image in `docker-compose.yml` is pinned to an exact version (never `latest`, never a bare major), and carries the `wud` label that tells the homelab watcher which tags are legitimate successors — `wud.tag.include` anchored on the current line, `wud.watch: 'false'` on the locally built `web`. Compose interpolates `$`, so those regexes are written with `$$`. **Bumping a pin means bumping its regex**; what a regex excludes (nginx mainline, a `-pg17` image, mosquitto 3.0) is what needs release notes first. See README → Deploying and updating.
+- **Deployment**: `./deploy.sh` (there is no `update.sh` any more). The name, the executable bit and being git-tracked are a contract with `home-server-stacks`' `homelab-probe`/wake agent, which runs it with no arguments and stdin on `/dev/null` for the console's deploy button — so it must never prompt, and every failure must be an exit code. `check` exits 10 when a commit is pending. It does not run migrations/collectstatic: `web/entrypoint.sh` does, at container start.
+- **TimescaleDB extension**: a newer image does not update the installed extension. `deploy.sh` runs `ALTER EXTENSION timescaledb UPDATE` after the health check (a no-op when current) and restarts `web` when the version moved.
 - **Persistent data**: all under `$DATA_DIR` (timescaledb, mosquitto, redis, logs, certs, backups) via bind mounts
 - **No generated files in git**: `.env`, mosquitto `passwd`, compiled `.mo` files are all generated at runtime

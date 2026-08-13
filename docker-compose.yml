@@ -1,6 +1,16 @@
 services:
   mosquitto:
-    image: eclipse-mosquitto:2
+    # `2` already resolved to this exact digest (it is the same image as `2.1-alpine`
+    # and `latest`), so pinning the patch changes nothing that runs — it only puts the
+    # running version in git instead of in a registry alias.
+    image: eclipse-mosquitto:2.1.2-alpine
+    labels:
+      # Anchored on the 2.1 line, not on `\d+\.\d+`: 2.1 deprecated `password_file`
+      # (which mosquitto.conf still uses) in favour of the password-file plugin, and
+      # announced its removal for 3.0. Leaving the next major inside the regex would
+      # turn "wud is green" into "the broker will stop reading its passwd file on the
+      # next pull". Bumping this regex is where that migration gets decided.
+      wud.tag.include: '^2\.1\.\d+-alpine$$'
     ports:
       - "${MQTT_EXPOSED_PORT:-1883}:1883"
     volumes:
@@ -21,7 +31,15 @@ services:
       retries: 3
 
   timescaledb:
-    image: timescale/timescaledb:latest-pg16
+    # Same image `latest-pg16` points to today, pinned so the TimescaleDB version is
+    # reviewable in a diff. A pull that changes the extension version needs
+    # `ALTER EXTENSION timescaledb UPDATE;` afterwards — see README.
+    image: timescale/timescaledb:2.29.1-pg16
+    labels:
+      # The pg major stays fixed on purpose: `latest-pg17`/`latest-pg18` exist and are
+      # "greater", but moving there is a pg_upgrade of the data directory, never
+      # something to inherit from a pull. `-oss` variants are excluded by the anchor.
+      wud.tag.include: '^\d+\.\d+\.\d+-pg16$$'
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -38,7 +56,13 @@ services:
       retries: 5
 
   redis:
-    image: redis:7-alpine
+    image: redis:8.10.0-alpine
+    labels:
+      # Kept inside the 8 line, and `-alpine` anchored: unconstrained, wud offers
+      # `32bit-stretch` as an upgrade, and `8.10.0-alpine3.23` is the same image under
+      # a longer name. Redis here only carries the Channels layer and the cache, so the
+      # 7 → 8 jump costs nothing (no persistent state worth migrating).
+      wud.tag.include: '^8\.\d+\.\d+-alpine$$'
     volumes:
       - ${DATA_DIR}/redis:/data
     networks:
@@ -52,6 +76,12 @@ services:
 
   web:
     build: ./web
+    labels:
+      # Built here, so it exists in no registry: wud was looking up
+      # `library/sensor_server-web:latest` on Docker Hub and reporting a 401 for it.
+      # Nothing is lost by excluding it — what this image tracks is the base image of
+      # web/Dockerfile (python:3.13-slim), which `deploy.sh` pulls and rebuilds against.
+      wud.watch: 'false'
     expose:
       - "8000"
     volumes:
@@ -101,7 +131,13 @@ services:
       start_period: 30s
 
   nginx:
-    image: nginx:1.27-alpine
+    image: nginx:1.30.4-alpine
+    labels:
+      # nginx numbers the stable branch with even minors (1.30) and mainline with odd
+      # ones (1.31), and mainline is always "greater" — a `^1\.\d+\.\d+-alpine$` regex
+      # would report this container as permanently behind. Staying inside 1.30 keeps
+      # the signal on stable patches; changing branch is a deliberate edit here.
+      wud.tag.include: '^1\.30\.\d+-alpine$$'
     ports:
       - "${WEB_EXPOSED_PORT:-8000}:80"
     volumes:
